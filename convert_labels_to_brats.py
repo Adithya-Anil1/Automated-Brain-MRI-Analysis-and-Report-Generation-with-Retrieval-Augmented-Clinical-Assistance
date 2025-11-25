@@ -22,6 +22,9 @@ from pathlib import Path
 
 def convert_labels_back_to_brats(seg: np.ndarray):
     """Convert from nnU-Net labels (0,1,2,3) to BraTS labels (0,1,2,4)"""
+    # Round to nearest integer first to handle floating point errors
+    seg = np.round(seg).astype(np.uint8)
+    
     new_seg = np.zeros_like(seg)
     new_seg[seg == 1] = 2  # ED: nnU-Net 1 → BraTS 2
     new_seg[seg == 2] = 1  # NCR: nnU-Net 2 → BraTS 1
