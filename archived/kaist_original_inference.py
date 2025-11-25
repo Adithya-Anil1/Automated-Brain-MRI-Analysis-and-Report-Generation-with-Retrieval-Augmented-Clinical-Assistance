@@ -1,3 +1,4 @@
+#Script used to run the 2 UNet models, comibines the results and generates segmentation masks.
 import os
 import numpy as np
 import torch

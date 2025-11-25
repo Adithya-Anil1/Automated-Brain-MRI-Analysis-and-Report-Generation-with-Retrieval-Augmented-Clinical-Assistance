@@ -1,3 +1,6 @@
+#Script used to run the 2 UNet models, comibines the results and generates segmentation masks.
+
+
 """
 BraTS 2021 Brain Tumor Segmentation - Single-threaded Version
 Uses the BraTS 2021 KAIST MRI Lab winning model for inference.

@@ -1,3 +1,5 @@
+#Loads segmentation masks and creates side by side comparisions for review
+
 """
 Visualize BraTS segmentation results
 Overlays the predicted segmentation mask on MRI images
