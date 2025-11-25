@@ -139,12 +139,14 @@ def predict_case_single_threaded(trainer, list_of_files, output_file, params, do
     
     # Save segmentation
     print(f"Saving segmentation to {output_file}")
+    # BraTS regions: (1, 2, 3) maps to region outputs
+    # These will be converted to BraTS labels later if needed
     save_segmentation_nifti_from_softmax(
         softmax_mean, 
         output_file,
         dct, 
         interpolation_order, 
-        None,
+        (1, 2, 3),  # region_class_order for BraTS regions model
         None, 
         None,
         None, 
