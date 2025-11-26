@@ -2,9 +2,26 @@
 Step 1: Sequence-specific findings
 
 Analyzes MRI sequence characteristics:
-- T1, T2, FLAIR intensity behavior in tumor regions
+- Semantic signal labels (hypo/iso/hyperintense) for each tumor region on each sequence
+- Intensity ratios relative to normal brain tissue for all sequences
+- T1, T1ce, T2, FLAIR intensity behavior in tumor regions
 - Contrast enhancement analysis (T1 vs T1ce)
-- Signal characteristics relative to normal brain
+
+NORMAL BRAIN REFERENCE METHODOLOGY:
+- Reference: All non-tumor brain tissue (combined gray matter + white matter)
+- Excludes: Tumor regions (labels 1,2,3), CSF, and background voxels
+- Selection: Voxels with intensity > 5th percentile of non-zero brain values
+- Rationale: Combined GM+WM provides a stable reference that accounts for
+  partial volume effects and is robust across different MRI acquisitions.
+  Using both tissues together avoids the need for tissue segmentation and
+  provides consistent reference values across different scan parameters.
+
+SEMANTIC SIGNAL LABELS:
+- markedly hypointense: ratio < 0.6 (>40% darker than normal brain)
+- hypointense: ratio 0.6-0.85 (15-40% darker)
+- isointense: ratio 0.85-1.15 (within 15% of normal)
+- hyperintense: ratio 1.15-1.5 (15-50% brighter)
+- markedly hyperintense: ratio > 1.5 (>50% brighter)
 
 Author: AI-Powered Brain MRI Assistant
 Date: November 27, 2025
@@ -21,183 +38,249 @@ from utils import (
 )
 
 
-def analyze_contrast_enhancement(t1_data, t1ce_data, tumor_masks):
+def get_signal_label(ratio):
     """
-    Analyze contrast enhancement by comparing T1 pre and post contrast.
-    Enhancement indicates blood-brain barrier breakdown.
+    Convert intensity ratio to semantic signal label.
+    
+    Args:
+        ratio: Intensity ratio (tumor region mean / normal brain mean)
+    
+    Returns:
+        str: Semantic label
     """
-    et_mask = tumor_masks['et']
-    tc_mask = tumor_masks['tc']
-    wt_mask = tumor_masks['wt']
-    
-    # Calculate enhancement ratio: T1ce / T1 in tumor regions
-    t1_safe = np.where(t1_data > 0, t1_data, 1)
-    enhancement_ratio = t1ce_data / t1_safe
-    
-    results = {
-        'enhancing_tumor': {
-            't1_stats': get_intensity_stats(t1_data, et_mask),
-            't1ce_stats': get_intensity_stats(t1ce_data, et_mask),
-            'enhancement_ratio': get_intensity_stats(enhancement_ratio, et_mask) if et_mask.sum() > 0 else None
-        },
-        'tumor_core': {
-            't1_stats': get_intensity_stats(t1_data, tc_mask),
-            't1ce_stats': get_intensity_stats(t1ce_data, tc_mask),
-            'enhancement_ratio': get_intensity_stats(enhancement_ratio, tc_mask) if tc_mask.sum() > 0 else None
-        },
-        'whole_tumor': {
-            't1_stats': get_intensity_stats(t1_data, wt_mask),
-            't1ce_stats': get_intensity_stats(t1ce_data, wt_mask),
-            'enhancement_ratio': get_intensity_stats(enhancement_ratio, wt_mask) if wt_mask.sum() > 0 else None
-        }
-    }
-    
-    # Determine enhancement pattern
-    if et_mask.sum() > 0 and results['enhancing_tumor']['enhancement_ratio']:
-        et_enhancement = results['enhancing_tumor']['enhancement_ratio']['mean']
-        if et_enhancement > 1.5:
-            results['enhancement_pattern'] = 'Strong enhancement'
-            results['enhancement_description'] = 'Marked contrast uptake indicating significant BBB breakdown'
-        elif et_enhancement > 1.2:
-            results['enhancement_pattern'] = 'Moderate enhancement'
-            results['enhancement_description'] = 'Moderate contrast uptake suggesting partial BBB disruption'
-        elif et_enhancement > 1.0:
-            results['enhancement_pattern'] = 'Mild enhancement'
-            results['enhancement_description'] = 'Subtle contrast uptake with minimal BBB compromise'
-        else:
-            results['enhancement_pattern'] = 'No significant enhancement'
-            results['enhancement_description'] = 'No appreciable contrast uptake'
+    if ratio < 0.6:
+        return "markedly hypointense"
+    elif ratio < 0.85:
+        return "hypointense"
+    elif ratio < 1.15:
+        return "isointense"
+    elif ratio < 1.5:
+        return "hyperintense"
     else:
-        results['enhancement_pattern'] = 'No enhancing tumor detected'
-        results['enhancement_description'] = 'Non-enhancing lesion, may suggest low-grade pathology'
+        return "markedly hyperintense"
+
+
+def get_signal_summary(t1_label, t2_label, flair_label, t1ce_label=None):
+    """Generate a one-line signal summary for a region."""
+    parts = [f"T1 {t1_label}", f"T2 {t2_label}", f"FLAIR {flair_label}"]
+    if t1ce_label:
+        parts.append(f"T1ce {t1ce_label}")
+    return ", ".join(parts)
+
+
+def analyze_region_signals(region_name, region_mask, 
+                           t1_data, t2_data, flair_data, t1ce_data,
+                           normal_t1, normal_t2, normal_flair, normal_t1ce):
+    """
+    Analyze signal characteristics for a specific tumor region across all sequences.
+    
+    Returns complete intensity metrics, ratios, and semantic labels for each sequence.
+    """
+    if region_mask.sum() == 0:
+        return None
+    
+    # Get intensity stats for this region in each sequence
+    t1_stats = get_intensity_stats(t1_data, region_mask)
+    t2_stats = get_intensity_stats(t2_data, region_mask)
+    flair_stats = get_intensity_stats(flair_data, region_mask)
+    t1ce_stats = get_intensity_stats(t1ce_data, region_mask)
+    
+    # Calculate ratios relative to normal brain
+    t1_ratio = t1_stats['mean'] / normal_t1['mean'] if normal_t1['mean'] and normal_t1['mean'] > 0 else 1.0
+    t2_ratio = t2_stats['mean'] / normal_t2['mean'] if normal_t2['mean'] and normal_t2['mean'] > 0 else 1.0
+    flair_ratio = flair_stats['mean'] / normal_flair['mean'] if normal_flair['mean'] and normal_flair['mean'] > 0 else 1.0
+    t1ce_ratio = t1ce_stats['mean'] / normal_t1ce['mean'] if normal_t1ce['mean'] and normal_t1ce['mean'] > 0 else 1.0
+    
+    # Get semantic labels
+    t1_label = get_signal_label(t1_ratio)
+    t2_label = get_signal_label(t2_ratio)
+    flair_label = get_signal_label(flair_ratio)
+    t1ce_label = get_signal_label(t1ce_ratio)
+    
+    # Enhancement ratio (T1ce vs T1 pre-contrast)
+    enhancement_ratio = t1ce_stats['mean'] / t1_stats['mean'] if t1_stats['mean'] and t1_stats['mean'] > 0 else 1.0
+    
+    return {
+        'region': region_name,
+        'voxel_count': int(region_mask.sum()),
+        'T1': {
+            'mean_intensity': float(t1_stats['mean']),
+            'std': float(t1_stats['std']),
+            'ratio_to_normal': round(float(t1_ratio), 3),
+            'signal_label': t1_label
+        },
+        'T2': {
+            'mean_intensity': float(t2_stats['mean']),
+            'std': float(t2_stats['std']),
+            'ratio_to_normal': round(float(t2_ratio), 3),
+            'signal_label': t2_label
+        },
+        'FLAIR': {
+            'mean_intensity': float(flair_stats['mean']),
+            'std': float(flair_stats['std']),
+            'ratio_to_normal': round(float(flair_ratio), 3),
+            'signal_label': flair_label
+        },
+        'T1ce': {
+            'mean_intensity': float(t1ce_stats['mean']),
+            'std': float(t1ce_stats['std']),
+            'ratio_to_normal': round(float(t1ce_ratio), 3),
+            'signal_label': t1ce_label,
+            'enhancement_ratio': round(float(enhancement_ratio), 3)
+        },
+        'signal_summary': get_signal_summary(t1_label, t2_label, flair_label, t1ce_label)
+    }
+
+
+def analyze_all_region_signals(t1_data, t2_data, flair_data, t1ce_data, tumor_masks, seg_data):
+    """
+    Analyze signal characteristics for all tumor regions.
+    
+    Returns comprehensive signal analysis with ratios and semantic labels.
+    """
+    # Get normal brain stats for all sequences
+    normal_t1 = get_normal_brain_stats(t1_data, seg_data)
+    normal_t2 = get_normal_brain_stats(t2_data, seg_data)
+    normal_flair = get_normal_brain_stats(flair_data, seg_data)
+    normal_t1ce = get_normal_brain_stats(t1ce_data, seg_data)
+    
+    results = {
+        'normal_brain_reference': {
+            'methodology': 'Combined gray matter + white matter (non-tumor, non-CSF brain tissue)',
+            'T1_mean': normal_t1['mean'],
+            'T2_mean': normal_t2['mean'],
+            'FLAIR_mean': normal_flair['mean'],
+            'T1ce_mean': normal_t1ce['mean'],
+            'voxel_count': normal_t1['voxel_count']
+        },
+        'regions': {}
+    }
+    
+    # Analyze each region
+    region_labels = {
+        'ncr': 'Necrotic Core (NCR)',
+        'ed': 'Peritumoral Edema (ED)', 
+        'et': 'Enhancing Tumor (ET)'
+    }
+    
+    for key, display_name in region_labels.items():
+        mask = tumor_masks[key]
+        region_analysis = analyze_region_signals(
+            display_name, mask,
+            t1_data, t2_data, flair_data, t1ce_data,
+            normal_t1, normal_t2, normal_flair, normal_t1ce
+        )
+        if region_analysis:
+            results['regions'][key] = region_analysis
     
     return results
 
 
-def analyze_t2_flair_behavior(t2_data, flair_data, tumor_masks, seg_data):
+def analyze_contrast_enhancement(t1_data, t1ce_data, tumor_masks, region_signals):
     """
-    Analyze T2 and FLAIR signal characteristics.
+    Analyze contrast enhancement patterns using pre-computed region signals.
     """
-    ed_mask = tumor_masks['ed']
-    ncr_mask = tumor_masks['ncr']
     et_mask = tumor_masks['et']
-    wt_mask = tumor_masks['wt']
-    
-    # Get normal brain stats for comparison
-    t2_normal = get_normal_brain_stats(t2_data, seg_data)
-    flair_normal = get_normal_brain_stats(flair_data, seg_data)
+    ncr_mask = tumor_masks['ncr']
     
     results = {
-        'normal_brain': {
-            't2': t2_normal,
-            'flair': flair_normal
-        },
-        'edema': {
-            't2': get_intensity_stats(t2_data, ed_mask),
-            'flair': get_intensity_stats(flair_data, ed_mask)
-        },
-        'necrotic_core': {
-            't2': get_intensity_stats(t2_data, ncr_mask),
-            'flair': get_intensity_stats(flair_data, ncr_mask)
-        },
-        'enhancing_tumor': {
-            't2': get_intensity_stats(t2_data, et_mask),
-            'flair': get_intensity_stats(flair_data, et_mask)
-        },
-        'whole_tumor': {
-            't2': get_intensity_stats(t2_data, wt_mask),
-            'flair': get_intensity_stats(flair_data, wt_mask)
-        }
+        'enhancement_present': bool(et_mask.sum() > 0),
+        'pattern': None,
+        'heterogeneity': None,
+        'metrics': {}
     }
     
-    # Characterize signal behavior
-    signal_behavior = []
-    signal_details = []
+    if not results['enhancement_present']:
+        results['pattern'] = 'Non-enhancing'
+        results['heterogeneity'] = 'Not applicable'
+        results['description'] = 'Non-enhancing lesion, may suggest low-grade pathology or treatment effect'
+        return results
     
-    # Edema characterization
-    if ed_mask.sum() > 0 and t2_normal['mean'] is not None and t2_normal['mean'] > 0:
-        ed_t2_ratio = results['edema']['t2']['mean'] / t2_normal['mean']
-        ed_flair_ratio = results['edema']['flair']['mean'] / flair_normal['mean']
+    # Get enhancement metrics from region signals
+    et_signals = region_signals['regions'].get('et', {})
+    if et_signals:
+        enhancement_ratio = et_signals['T1ce'].get('enhancement_ratio', 1.0)
+        results['metrics']['enhancement_ratio_T1ce_over_T1'] = enhancement_ratio
+        results['metrics']['T1ce_ratio_to_normal'] = et_signals['T1ce']['ratio_to_normal']
         
-        results['edema']['t2_ratio'] = ed_t2_ratio
-        results['edema']['flair_ratio'] = ed_flair_ratio
-        
-        if ed_t2_ratio > 1.3:
-            signal_behavior.append('Edema: T2 hyperintense')
-            signal_details.append(f'Peritumoral edema shows {ed_t2_ratio:.1f}x T2 signal vs normal brain')
-        if ed_flair_ratio > 1.3:
-            signal_behavior.append('Edema: FLAIR hyperintense')
-            signal_details.append(f'Peritumoral edema shows {ed_flair_ratio:.1f}x FLAIR signal vs normal brain')
-    
-    # Enhancing tumor characterization
-    if et_mask.sum() > 0 and t2_normal['mean'] is not None and t2_normal['mean'] > 0:
-        et_t2_ratio = results['enhancing_tumor']['t2']['mean'] / t2_normal['mean']
-        et_flair_ratio = results['enhancing_tumor']['flair']['mean'] / flair_normal['mean']
-        
-        results['enhancing_tumor']['t2_ratio'] = et_t2_ratio
-        results['enhancing_tumor']['flair_ratio'] = et_flair_ratio
-        
-        if et_t2_ratio > 1.3:
-            signal_behavior.append('Enhancing tumor: T2 hyperintense')
-        elif et_t2_ratio < 0.7:
-            signal_behavior.append('Enhancing tumor: T2 hypointense')
-        else:
-            signal_behavior.append('Enhancing tumor: T2 isointense')
+        # Get heterogeneity from standard deviation
+        t1ce_mean = et_signals['T1ce']['mean_intensity']
+        t1ce_std = et_signals['T1ce']['std']
+        if t1ce_mean > 0:
+            cv = t1ce_std / t1ce_mean
+            results['metrics']['coefficient_of_variation'] = round(float(cv), 3)
             
-        if et_flair_ratio > 1.3:
-            signal_behavior.append('Enhancing tumor: FLAIR hyperintense')
-        elif et_flair_ratio < 0.7:
-            signal_behavior.append('Enhancing tumor: FLAIR hypointense')
+            if cv > 0.35:
+                results['heterogeneity'] = 'Markedly heterogeneous'
+            elif cv > 0.25:
+                results['heterogeneity'] = 'Heterogeneous'
+            elif cv > 0.15:
+                results['heterogeneity'] = 'Mildly heterogeneous'
+            else:
+                results['heterogeneity'] = 'Homogeneous'
     
-    # Necrotic core characterization
-    if ncr_mask.sum() > 0 and t2_normal['mean'] is not None and t2_normal['mean'] > 0:
-        ncr_t2_ratio = results['necrotic_core']['t2']['mean'] / t2_normal['mean']
-        ncr_flair_ratio = results['necrotic_core']['flair']['mean'] / flair_normal['mean']
+    # Determine enhancement pattern (ring vs solid)
+    if ncr_mask.sum() > 0 and et_mask.sum() > 0:
+        from scipy.ndimage import binary_dilation
+        dilated_ncr = binary_dilation(ncr_mask, iterations=2)
+        enhancement_around_ncr = np.logical_and(dilated_ncr, et_mask).sum()
         
-        results['necrotic_core']['t2_ratio'] = ncr_t2_ratio
-        results['necrotic_core']['flair_ratio'] = ncr_flair_ratio
-        
-        if ncr_t2_ratio > 1.5:
-            signal_behavior.append('Necrotic core: T2 hyperintense (fluid/necrosis)')
-        if ncr_flair_ratio < 0.8:
-            signal_behavior.append('Necrotic core: FLAIR hypointense (suggests fluid)')
+        if enhancement_around_ncr > 0.3 * et_mask.sum():
+            results['pattern'] = 'Ring-enhancing'
+            results['description'] = 'Peripheral rim enhancement surrounding central non-enhancing core, characteristic of high-grade glioma or metastasis'
+        else:
+            results['pattern'] = 'Solid/nodular enhancing'
+            results['description'] = 'Solid pattern of enhancement without central necrosis'
+    else:
+        results['pattern'] = 'Solid/nodular enhancing'
+        results['description'] = 'Solid pattern of enhancement without central necrosis'
     
-    results['signal_behavior'] = signal_behavior
-    results['signal_details'] = signal_details
+    # Add enhancement strength description
+    if 'enhancement_ratio_T1ce_over_T1' in results['metrics']:
+        ratio = results['metrics']['enhancement_ratio_T1ce_over_T1']
+        if ratio > 2.0:
+            results['enhancement_strength'] = 'Marked enhancement'
+        elif ratio > 1.5:
+            results['enhancement_strength'] = 'Strong enhancement'
+        elif ratio > 1.2:
+            results['enhancement_strength'] = 'Moderate enhancement'
+        elif ratio > 1.05:
+            results['enhancement_strength'] = 'Mild enhancement'
+        else:
+            results['enhancement_strength'] = 'Minimal/equivocal enhancement'
     
     return results
 
 
-def analyze_t1_behavior(t1_data, tumor_masks, seg_data):
-    """Analyze T1-weighted signal characteristics."""
-    t1_normal = get_normal_brain_stats(t1_data, seg_data)
+def detect_t2_flair_mismatch(region_signals):
+    """
+    Detect T2/FLAIR mismatch sign (suggestive of IDH-mutant glioma).
     
+    T2/FLAIR mismatch: Region that is hyperintense on T2 but relatively 
+    hypointense on FLAIR compared to surrounding edema.
+    """
     results = {
-        'normal_brain': t1_normal
+        'mismatch_detected': False,
+        'description': None
     }
     
-    signal_behavior = []
+    # Check each region for mismatch
+    for key, region in region_signals['regions'].items():
+        t2_ratio = region['T2']['ratio_to_normal']
+        flair_ratio = region['FLAIR']['ratio_to_normal']
+        
+        # Mismatch: T2 hyperintense (>1.3) but FLAIR relatively lower (ratio < 0.8 of T2 ratio)
+        if t2_ratio > 1.3 and flair_ratio < t2_ratio * 0.7:
+            results['mismatch_detected'] = True
+            results['region'] = key
+            results['t2_ratio'] = t2_ratio
+            results['flair_ratio'] = flair_ratio
+            results['description'] = f"Possible T2/FLAIR mismatch in {region['region']}: T2 hyperintense (ratio {t2_ratio:.2f}) with relatively suppressed FLAIR (ratio {flair_ratio:.2f}). May suggest IDH-mutant lower-grade glioma."
+            break
     
-    for region_name, mask in [('ncr', tumor_masks['ncr']), 
-                               ('et', tumor_masks['et']),
-                               ('ed', tumor_masks['ed'])]:
-        if mask.sum() > 0:
-            stats = get_intensity_stats(t1_data, mask)
-            results[region_name] = stats
-            
-            if t1_normal['mean'] and t1_normal['mean'] > 0:
-                ratio = stats['mean'] / t1_normal['mean']
-                results[region_name]['ratio_to_normal'] = ratio
-                
-                region_label = {'ncr': 'Necrotic core', 'et': 'Enhancing tumor', 'ed': 'Edema'}[region_name]
-                if ratio > 1.2:
-                    signal_behavior.append(f'{region_label}: T1 hyperintense')
-                elif ratio < 0.8:
-                    signal_behavior.append(f'{region_label}: T1 hypointense')
-                else:
-                    signal_behavior.append(f'{region_label}: T1 isointense')
+    if not results['mismatch_detected']:
+        results['description'] = "No T2/FLAIR mismatch detected. Signal intensity patterns concordant between T2 and FLAIR sequences."
     
-    results['signal_behavior'] = signal_behavior
     return results
 
 
@@ -207,30 +290,36 @@ def generate_summary(results):
     
     lines.append("SEQUENCE-SPECIFIC FINDINGS:")
     lines.append("")
+    lines.append("Reference: Normal brain tissue (combined GM+WM, excluding tumor and CSF)")
+    lines.append("")
+    
+    # Signal characteristics for each region
+    lines.append("Signal Characteristics by Region:")
+    region_signals = results['region_signal_analysis']['regions']
+    
+    for key in ['ncr', 'ed', 'et']:
+        if key in region_signals:
+            region = region_signals[key]
+            lines.append(f"  {region['region']}:")
+            lines.append(f"    {region['signal_summary']}")
+            lines.append(f"    Ratios - T1: {region['T1']['ratio_to_normal']:.2f}, T2: {region['T2']['ratio_to_normal']:.2f}, FLAIR: {region['FLAIR']['ratio_to_normal']:.2f}, T1ce: {region['T1ce']['ratio_to_normal']:.2f}")
     
     # Enhancement pattern
+    lines.append("")
     enhancement = results['contrast_enhancement']
-    lines.append(f"Contrast Enhancement: {enhancement['enhancement_pattern']}")
-    lines.append(f"  {enhancement['enhancement_description']}")
+    lines.append(f"Contrast Enhancement: {enhancement['pattern']}")
+    if 'enhancement_strength' in enhancement:
+        lines.append(f"  Strength: {enhancement['enhancement_strength']}")
+    if 'heterogeneity' in enhancement and enhancement['heterogeneity']:
+        lines.append(f"  Heterogeneity: {enhancement['heterogeneity']}")
+    if 'description' in enhancement:
+        lines.append(f"  {enhancement['description']}")
     
-    if enhancement['enhancing_tumor']['enhancement_ratio']:
-        ratio = enhancement['enhancing_tumor']['enhancement_ratio']['mean']
-        lines.append(f"  Enhancement ratio: {ratio:.2f}x (T1ce/T1)")
-    
-    # T2/FLAIR behavior
+    # T2/FLAIR mismatch
     lines.append("")
-    lines.append("T2/FLAIR Signal Characteristics:")
-    for behavior in results['t2_flair_analysis']['signal_behavior']:
-        lines.append(f"  - {behavior}")
-    
-    for detail in results['t2_flair_analysis'].get('signal_details', []):
-        lines.append(f"  - {detail}")
-    
-    # T1 behavior
-    lines.append("")
-    lines.append("T1 Signal Characteristics:")
-    for behavior in results['t1_analysis']['signal_behavior']:
-        lines.append(f"  - {behavior}")
+    mismatch = results['t2_flair_mismatch']
+    lines.append(f"T2/FLAIR Mismatch: {'Present' if mismatch['mismatch_detected'] else 'Not detected'}")
+    lines.append(f"  {mismatch['description']}")
     
     # Volume summary
     lines.append("")
@@ -279,22 +368,44 @@ def analyze_sequence_findings(input_folder, segmentation_path, output_path=None)
     print("STEP 1: SEQUENCE-SPECIFIC FINDINGS")
     print("="*60)
     
+    # Analyze all region signals with semantic labels and ratios
+    print("\n--- Regional Signal Analysis ---")
+    region_signals = analyze_all_region_signals(
+        t1_data, t2_data, flair_data, t1ce_data, tumor_masks, seg_data
+    )
+    
+    print(f"\nNormal brain reference (GM+WM combined):")
+    print(f"  T1 mean: {region_signals['normal_brain_reference']['T1_mean']:.1f}")
+    print(f"  T2 mean: {region_signals['normal_brain_reference']['T2_mean']:.1f}")
+    print(f"  FLAIR mean: {region_signals['normal_brain_reference']['FLAIR_mean']:.1f}")
+    print(f"  T1ce mean: {region_signals['normal_brain_reference']['T1ce_mean']:.1f}")
+    print(f"  Voxel count: {region_signals['normal_brain_reference']['voxel_count']:,}")
+    
+    print("\nSignal characteristics by region:")
+    for key in ['ncr', 'ed', 'et']:
+        if key in region_signals['regions']:
+            region = region_signals['regions'][key]
+            print(f"\n  {region['region']}:")
+            print(f"    {region['signal_summary']}")
+            print(f"    T1 ratio: {region['T1']['ratio_to_normal']:.3f}, T2 ratio: {region['T2']['ratio_to_normal']:.3f}")
+            print(f"    FLAIR ratio: {region['FLAIR']['ratio_to_normal']:.3f}, T1ce ratio: {region['T1ce']['ratio_to_normal']:.3f}")
+            print(f"    Enhancement ratio (T1ce/T1): {region['T1ce']['enhancement_ratio']:.3f}")
+    
     # Analyze contrast enhancement
     print("\n--- Contrast Enhancement Analysis ---")
-    enhancement_results = analyze_contrast_enhancement(t1_data, t1ce_data, tumor_masks)
-    print(f"Enhancement pattern: {enhancement_results['enhancement_pattern']}")
+    enhancement_results = analyze_contrast_enhancement(
+        t1_data, t1ce_data, tumor_masks, region_signals
+    )
+    print(f"  Pattern: {enhancement_results['pattern']}")
+    if 'enhancement_strength' in enhancement_results:
+        print(f"  Strength: {enhancement_results['enhancement_strength']}")
+    if 'heterogeneity' in enhancement_results:
+        print(f"  Heterogeneity: {enhancement_results['heterogeneity']}")
     
-    # Analyze T2/FLAIR
-    print("\n--- T2/FLAIR Signal Analysis ---")
-    t2_flair_results = analyze_t2_flair_behavior(t2_data, flair_data, tumor_masks, seg_data)
-    for behavior in t2_flair_results['signal_behavior']:
-        print(f"  - {behavior}")
-    
-    # Analyze T1
-    print("\n--- T1 Signal Analysis ---")
-    t1_results = analyze_t1_behavior(t1_data, tumor_masks, seg_data)
-    for behavior in t1_results['signal_behavior']:
-        print(f"  - {behavior}")
+    # T2/FLAIR mismatch
+    print("\n--- T2/FLAIR Mismatch Analysis ---")
+    mismatch_results = detect_t2_flair_mismatch(region_signals)
+    print(f"  {mismatch_results['description']}")
     
     # Calculate volumes
     volumes = {
@@ -302,7 +413,7 @@ def analyze_sequence_findings(input_folder, segmentation_path, output_path=None)
         'Tumor Core (TC)': calculate_volume(tumor_masks['tc'], voxel_info['volume_cm3']),
         'Enhancing Tumor (ET)': calculate_volume(tumor_masks['et'], voxel_info['volume_cm3']),
         'Necrotic Core (NCR)': calculate_volume(tumor_masks['ncr'], voxel_info['volume_cm3']),
-        'Edema (ED)': calculate_volume(tumor_masks['ed'], voxel_info['volume_cm3'])
+        'Peritumoral Edema (ED)': calculate_volume(tumor_masks['ed'], voxel_info['volume_cm3'])
     }
     
     print("\n--- Tumor Volumes ---")
@@ -315,9 +426,9 @@ def analyze_sequence_findings(input_folder, segmentation_path, output_path=None)
         'case_id': case_id,
         'step': 'Step 1 - Sequence-specific findings',
         'voxel_info': voxel_info,
+        'region_signal_analysis': region_signals,
         'contrast_enhancement': enhancement_results,
-        't2_flair_analysis': t2_flair_results,
-        't1_analysis': t1_results,
+        't2_flair_mismatch': mismatch_results,
         'volumes': volumes,
         'sequences_analyzed': ['T1', 'T1ce', 'T2', 'FLAIR'],
         'diffusion_available': False,
