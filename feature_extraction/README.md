@@ -53,10 +53,20 @@ Each step produces a JSON file with:
 - Signal characteristics relative to normal brain
 
 ### Step 2: Mass Effect Metrics
-- Midline shift (mm)
+- Midline shift (mm) with clinical severity classification
+  - Shifts < 3mm reported as "No significant midline shift detected"
+  - Direction only reported when shift >= 3mm (clinically meaningful)
 - Ventricular compression/asymmetry
-- Herniation risk assessment
+- Herniation risk assessment **based on objective measurements**:
+  - Risk calculated from midline shift magnitude, ventricular compression, sulcal effacement
+  - NOT derived from tumor proximity alone (requires measurable displacement)
+  - Risk score provided for transparency
 - Sulcal effacement
+- **Anatomical context** (also extracted in this step):
+  - Brain lobe identification (frontal, parietal, temporal, occipital)
+  - Hemisphere (left, right, bilateral)
+  - Depth classification (cortical/superficial, subcortical, periventricular/deep)
+  - Approximate gyri estimation
 
 ### Step 3: Anatomical Context
 - Brain lobe identification
