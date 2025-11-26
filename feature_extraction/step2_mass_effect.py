@@ -500,7 +500,9 @@ def detect_herniation_signs(brain_data, seg_data, voxel_dims, midline_results=No
     
     # Factor 1: Midline shift (most important indicator)
     if midline_results:
-        shift_mm = midline_results.get('shift_mm', 0) or 0
+        shift_mm = midline_results.get('shift_mm')
+        if shift_mm is None:
+            shift_mm = 0
         shift_severity = midline_results.get('severity', 'None')
         
         if shift_mm >= 10:
@@ -519,7 +521,9 @@ def detect_herniation_signs(brain_data, seg_data, voxel_dims, midline_results=No
     # Factor 2: Ventricular compression
     if ventricle_results:
         vent_severity = ventricle_results.get('severity', 'None/Minimal')
-        asymmetry = ventricle_results.get('asymmetry_ratio', 0) or 0
+        asymmetry = ventricle_results.get('asymmetry_ratio')
+        if asymmetry is None:
+            asymmetry = 0
         
         if vent_severity == 'Severe' or asymmetry > 0.5:
             risk_score += 3
