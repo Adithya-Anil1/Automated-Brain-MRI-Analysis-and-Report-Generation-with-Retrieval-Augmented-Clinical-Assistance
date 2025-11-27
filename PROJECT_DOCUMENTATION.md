@@ -5,9 +5,15 @@
 This project implements an automated brain tumor segmentation system using the **BraTS 2021 KAIST MRI Lab winning model**. The system performs semantic segmentation on brain MRI scans to identify and delineate different tumor regions with state-of-the-art accuracy.
 
 **Status**: ✅ Fully functional and validated  
-**Last Updated**: November 26, 2025  
+**Last Updated**: November 27, 2025  
 **Python Version**: 3.10.11  
 **Compute**: CPU-only (no GPU required, though inference is slow)
+
+### New Features (v2.0)
+- ✅ **Feature Extraction Pipeline**: 6-step analysis for radiology report generation
+- ✅ **LLM Integration Safeguards**: Prevents hallucination of patient data and sequences
+- ✅ **Quality Metrics**: SNR-based reliability warnings
+- ✅ **Structured Output**: JSON format optimized for LLM consumption
 
 ---
 
@@ -442,6 +448,17 @@ AI-Powered Brain MRI Assistant/
 ├── nnUNet_raw/                              Raw data structure (nnU-Net format)
 ├── nnUNet_preprocessed/                     Preprocessed cache
 ├── venv310/                                 Python virtual environment
+├── feature_extraction/                      ⭐ Feature extraction pipeline (NEW)
+│   ├── run_all.py                           Main pipeline script
+│   ├── step1_sequence_findings.py           Signal analysis
+│   ├── step2_mass_effect.py                 Mass effect metrics
+│   ├── step3_multiplicity.py                Lesion multiplicity
+│   ├── step4_morphology.py                  Tumor morphology
+│   ├── step5_quality.py                     Quality control
+│   ├── step6_normal_structures.py           Normal structures
+│   ├── utils.py                             Shared utilities
+│   └── README.md                            Pipeline documentation
+│
 ├── main_files/                              Additional utilities
 ├── documentation/
 │   └── instructions.md                      ⭐ Usage instructions (KEEP)
@@ -452,19 +469,153 @@ AI-Powered Brain MRI Assistant/
 
 ---
 
+## Feature Extraction Pipeline (NEW)
+
+### Overview
+
+A comprehensive 6-step feature extraction pipeline that analyzes tumor segmentations and produces structured output optimized for LLM-based radiology report generation.
+
+**Location**: `feature_extraction/`  
+**Main Script**: `run_all.py`  
+**Output**: JSON summaries + text reports
+
+### Pipeline Steps
+
+#### Step 1: Sequence-Specific Findings (`step1_sequence_findings.py`)
+- Signal intensity analysis (hypo/iso/hyperintense) for each tumor region
+- Intensity ratios relative to normal brain tissue
+- Contrast enhancement pattern detection
+- T2/FLAIR mismatch analysis (IDH-mutant marker)
+- Tumor volume calculations
+
+#### Step 2: Mass Effect Metrics (`step2_mass_effect.py`)
+- Anatomical localization (hemisphere, lobe, depth, gyri)
+- Midline shift measurement with significance threshold
+- Ventricular compression assessment
+- Sulcal effacement grading
+- Herniation risk scoring (0-7 scale)
+
+#### Step 3: Lesion Multiplicity (`step3_multiplicity.py`)
+- Connected component analysis
+- Satellite lesion detection
+- Inter-lesion distance calculation
+- Distribution pattern classification (solitary, multicentric, etc.)
+- Differential diagnosis suggestions
+
+#### Step 4: Tumor Morphology (`step4_morphology.py`)
+- Shape analysis (sphericity, elongation)
+- Contour regularity (smooth vs lobulated vs irregular)
+- Margin transition sharpness (well-defined vs infiltrative)
+- Necrosis pattern and percentage
+- Cystic vs solid classification
+
+#### Step 5: Quality Control (`step5_quality.py`)
+- Segmentation quality scoring (0-100)
+- Image quality per sequence (SNR estimates)
+- Artifact detection (motion, susceptibility, truncation)
+- Measurement confidence levels
+- Case-specific caveats and limitations
+
+#### Step 6: Normal Structures (`step6_normal_structures.py`)
+- Ventricular system assessment (size, symmetry, hydrocephalus)
+- Brain parenchyma evaluation (gray-white differentiation)
+- Major vessel assessment (flow voids, vascular involvement)
+
+### LLM Integration Safeguards
+
+The pipeline includes specific features to prevent LLM hallucination:
+
+1. **Patient Information Placeholders**
+   ```json
+   "patient_info": {
+     "age": "<not provided>",
+     "sex": "<not provided>",
+     "clinical_history": "<not provided>",
+     "presenting_symptoms": "<not provided>",
+     "note": "DO NOT fabricate patient demographics or clinical history."
+   }
+   ```
+
+2. **Technique Documentation**
+   ```json
+   "technique": {
+     "sequences_performed": ["T1", "T1CE", "T2", "FLAIR"],
+     "sequences_not_available": ["DWI", "ADC", "MRS", "Perfusion"],
+     "contrast_administered": true,
+     "acquisition_parameters": {...},
+     "note": "LLM must only reference sequences listed in sequences_performed"
+   }
+   ```
+
+3. **Guarded Medical Language**
+   - Old: "may suggest low-grade pathology"
+   - New: "can be seen with lower-grade glioma, treatment effect, or other pathology; clinical and histopathological correlation required"
+
+4. **Measurement Reliability Warnings**
+   - Flags when T2 SNR is low: affects necrosis fraction, cystic classification
+   - Flags when overall quality is poor: interpret with caution
+
+5. **Laterality Validation**
+   - Cross-checks hemisphere from voxel distribution vs centroid methods
+   - Reports inconsistencies for tumors near midline
+
+6. **Border vs Margin Clarification**
+   - Contour: outer surface smoothness (smooth/lobulated/irregular)
+   - Margin: tumor-brain intensity transition (well-defined/infiltrative)
+
+### Usage
+
+```bash
+cd feature_extraction
+python run_all.py --input <mri_folder> --segmentation <seg.nii.gz> --output <output_folder>
+```
+
+### Output Files
+
+| File | Purpose |
+|------|--------|
+| `llm_ready_summary.json` | Structured data optimized for LLM consumption |
+| `radiology_report.txt` | Human-readable text report |
+| `comprehensive_analysis.json` | Complete technical data |
+| `step1_sequence_findings.json` | Detailed step 1 results |
+| `step2_mass_effect.json` | Detailed step 2 results |
+| `step3_multiplicity.json` | Detailed step 3 results |
+| `step4_morphology.json` | Detailed step 4 results |
+| `step5_quality.json` | Detailed step 5 results |
+| `step6_normal_structures.json` | Detailed step 6 results |
+
+### Sample LLM-Ready Output Structure
+
+```json
+{
+  "case_id": "BraTS-GLI-01477-000",
+  "patient_info": { "age": "<not provided>", ... },
+  "technique": { "sequences_performed": [...], ... },
+  "tumor_characteristics": { "volume_cm3": 189.0, ... },
+  "location": { "hemisphere": "left", "primary_lobe": "temporal", ... },
+  "enhancement": { "present": false, "pattern": "Non-enhancing", ... },
+  "morphology": { "contour_shape": "Smooth contour", "margin_transition": "Infiltrative transition", ... },
+  "quality_metrics": { "segmentation_score": 100, ... },
+  "measurement_reliability_warnings": [...],
+  "caveats": [...]
+}
+```
+
+---
+
 ## Future Improvements
 
 ### Short Term
-1. **Test with more samples**: Currently validated on only 1 case (BraTS2021_00495)
-2. **Visualization**: Implement 3D rendering and slice-by-slice views
-3. **Report Generation**: Automated medical report with measurements
+1. ~~**Report Generation**: Automated medical report with measurements~~ ✅ DONE
+2. **Test with more samples**: Validate on larger dataset
+3. **Visualization**: Implement 3D rendering and slice-by-slice views
 4. **Performance optimization**: Investigate CPU-optimized inference
 
 ### Medium Term
 1. **GPU Support**: Enable CUDA for 10-20x faster inference
 2. **Web Interface**: Flask/Streamlit app for easy deployment
-3. **Batch Processing**: Process multiple cases in sequence
-4. **Model Compression**: Quantization or pruning for faster CPU inference
+3. **LLM Integration**: Direct integration with GPT-4/Claude for report generation
+4. **Batch Processing**: Process multiple cases in sequence
 
 ### Long Term
 1. **Clinical Validation**: Test on larger dataset (100+ cases)
