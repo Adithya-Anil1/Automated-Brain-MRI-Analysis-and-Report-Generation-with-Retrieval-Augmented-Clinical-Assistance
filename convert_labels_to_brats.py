@@ -87,24 +87,24 @@ def convert_file(input_path, output_path, format="brats2025"):
     # Show label mapping
     print(f"\nLabel mapping applied ({format.upper()}):")
     if 1 in unique_before:
-        print(f"  1 (ED) → 2 (ED)")
+        print(f"  1 (ED) -> 2 (ED)")
     if 2 in unique_before:
-        print(f"  2 (NCR) → 1 (NCR)")
+        print(f"  2 (NCR) -> 1 (NCR)")
     if 3 in unique_before:
-        print(f"  3 (ET) → {et_label} (ET)  ✓ CRITICAL CONVERSION")
+        print(f"  3 (ET) -> {et_label} (ET)  [CRITICAL CONVERSION]")
     
     # Save converted segmentation
     img_converted = nib.Nifti1Image(data_converted, img.affine, img.header)
     nib.save(img_converted, output_path)
     
-    print(f"\n✅ Saved converted segmentation to: {output_path}")
+    print(f"\n[OK] Saved converted segmentation to: {output_path}")
     print(f"\nExpected {format.upper()} labels: {sorted(expected_labels)}")
     print(f"Actual labels in output: {unique_after}")
     
     if set(unique_after) == expected_labels:
-        print(f"✅ SUCCESS: All {format.upper()} labels present!")
+        print(f"[OK] SUCCESS: All {format.upper()} labels present!")
     elif et_label not in unique_after:
-        print(f"⚠️  WARNING: Label {et_label} missing - check if input had label 3")
+        print(f"[WARNING] Label {et_label} missing - check if input had label 3")
 
 
 if __name__ == "__main__":
@@ -136,7 +136,7 @@ Examples:
         output_file = input_file.parent / (input_file.stem.replace('.nii', '_brats.nii') + '.gz')
     
     if not input_file.exists():
-        print(f"❌ Error: Input file not found: {input_file}")
+        print(f"[ERROR] Input file not found: {input_file}")
         sys.exit(1)
     
     # Create output directory if needed
