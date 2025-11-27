@@ -124,6 +124,46 @@ def get_voxel_dimensions(header):
     }
 
 
+def get_acquisition_details(header):
+    """
+    Extract acquisition details from NIfTI header.
+    
+    Returns slice thickness, voxel dimensions, and any available
+    acquisition parameters from the header.
+    """
+    dims = header.get_zooms()[:3]
+    shape = header.get_data_shape()[:3]
+    
+    # Slice thickness is typically the largest dimension (axial acquisition)
+    # or explicitly the z-dimension spacing
+    slice_thickness_mm = float(dims[2])
+    in_plane_resolution = (float(dims[0]), float(dims[1]))
+    
+    # Get matrix size
+    matrix_size = (int(shape[0]), int(shape[1]), int(shape[2]))
+    
+    # Check for additional info in header extensions or description
+    try:
+        descrip_raw = header.get('descrip', b'')
+        if isinstance(descrip_raw, bytes):
+            descrip = descrip_raw.decode('utf-8', errors='ignore').strip()
+        elif isinstance(descrip_raw, np.ndarray):
+            descrip = descrip_raw.tobytes().decode('utf-8', errors='ignore').strip()
+        else:
+            descrip = str(descrip_raw).strip()
+    except Exception:
+        descrip = None
+    
+    return {
+        'slice_thickness_mm': slice_thickness_mm,
+        'in_plane_resolution_mm': in_plane_resolution,
+        'voxel_size_mm': [float(d) for d in dims],
+        'matrix_size': matrix_size,
+        'num_slices': int(shape[2]),
+        'description': descrip if descrip else None
+    }
+
+
 def get_tumor_masks(seg_data):
     """Get masks for different tumor regions from segmentation."""
     seg_data = np.round(seg_data).astype(np.int32)

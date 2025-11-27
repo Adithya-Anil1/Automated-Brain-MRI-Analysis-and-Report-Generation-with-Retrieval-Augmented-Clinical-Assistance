@@ -33,7 +33,7 @@ from pathlib import Path
 
 from utils import (
     load_nifti, get_intensity_stats, get_normal_brain_stats,
-    get_case_id, get_mri_paths, get_voxel_dimensions,
+    get_case_id, get_mri_paths, get_voxel_dimensions, get_acquisition_details,
     get_tumor_masks, calculate_volume, save_results
 )
 
@@ -193,7 +193,7 @@ def analyze_contrast_enhancement(t1_data, t1ce_data, tumor_masks, region_signals
     if not results['enhancement_present']:
         results['pattern'] = 'Non-enhancing'
         results['heterogeneity'] = 'Not applicable'
-        results['description'] = 'Non-enhancing lesion, may suggest low-grade pathology or treatment effect'
+        results['description'] = 'Non-enhancing pattern can be seen with lower-grade glioma, treatment effect, or other pathology; clinical and histopathological correlation required'
         return results
     
     # Get enhancement metrics from region signals
@@ -288,6 +288,48 @@ def generate_summary(results):
     """Generate text summary for radiology report."""
     lines = []
     
+    # CLINICAL CONTEXT - Placeholders to prevent LLM fabrication
+    lines.append("CLINICAL INFORMATION:")
+    lines.append("  Patient age: <not provided>")
+    lines.append("  Patient sex: <not provided>")
+    lines.append("  Clinical history: <not provided>")
+    lines.append("  Presenting symptoms: <not provided>")
+    lines.append("  [Note: Do not fabricate - include only if provided in clinical records]")
+    lines.append("")
+    
+    # TECHNIQUE SECTION - Always include at the top
+    lines.append("TECHNIQUE:")
+    technique = results.get('technique', {})
+    
+    # Sequences performed
+    sequences = technique.get('sequences_performed', [])
+    if sequences:
+        lines.append(f"  Sequences performed: {', '.join(sequences)}")
+    else:
+        lines.append("  Sequences performed: <not provided>")
+    
+    # Contrast
+    if technique.get('contrast_administered', False):
+        lines.append(f"  Contrast: Administered ({technique.get('contrast_note', 'Gadolinium-based')})")
+    else:
+        lines.append("  Contrast: Not administered or not available")
+    
+    # Acquisition details
+    acq = technique.get('acquisition_parameters', {})
+    if acq:
+        slice_thick = acq.get('slice_thickness_mm', 'N/A')
+        in_plane = acq.get('in_plane_resolution_mm', ('N/A', 'N/A'))
+        matrix = acq.get('matrix_size', ('N/A', 'N/A', 'N/A'))
+        lines.append(f"  Slice thickness: {slice_thick} mm")
+        lines.append(f"  In-plane resolution: {in_plane[0]:.2f} × {in_plane[1]:.2f} mm")
+        lines.append(f"  Matrix size: {matrix[0]} × {matrix[1]} × {matrix[2]}")
+    
+    # Not available sequences
+    not_avail = technique.get('sequences_not_available', [])
+    if not_avail:
+        lines.append(f"  Not available: {', '.join(not_avail)}")
+    
+    lines.append("")
     lines.append("SEQUENCE-SPECIFIC FINDINGS:")
     lines.append("")
     lines.append("Reference: Normal brain tissue (combined GM+WM, excluding tumor and CSF)")
@@ -361,6 +403,61 @@ def analyze_sequence_findings(input_folder, segmentation_path, output_path=None)
     # Get voxel info
     voxel_info = get_voxel_dimensions(t1_header)
     
+    # Get acquisition details for technique section
+    acquisition_details = get_acquisition_details(t1_header)
+    
+    # Build technique section - document exactly what sequences are available
+    sequences_available = []
+    sequences_detail = {}
+    contrast_administered = False
+    
+    for seq_name, seq_path in mri_paths.items():
+        if seq_path.exists():
+            seq_upper = seq_name.upper()
+            sequences_available.append(seq_upper)
+            
+            # Load header for each sequence to get its specific details
+            _, _, seq_header = load_nifti(seq_path)
+            seq_acq = get_acquisition_details(seq_header)
+            
+            sequences_detail[seq_upper] = {
+                'available': True,
+                'file': seq_path.name,
+                'slice_thickness_mm': seq_acq['slice_thickness_mm'],
+                'in_plane_resolution_mm': seq_acq['in_plane_resolution_mm'],
+                'matrix_size': seq_acq['matrix_size'],
+                'num_slices': seq_acq['num_slices']
+            }
+            
+            # Check if contrast was used (T1ce present indicates contrast)
+            if seq_name.lower() == 't1ce':
+                contrast_administered = True
+        else:
+            sequences_detail[seq_name.upper()] = {
+                'available': False,
+                'file': None
+            }
+    
+    # Add DWI/ADC status (not in BraTS)
+    sequences_detail['DWI'] = {'available': False, 'note': 'Not included in BraTS dataset'}
+    sequences_detail['ADC'] = {'available': False, 'note': 'Not included in BraTS dataset'}
+    
+    technique_section = {
+        'sequences_performed': sequences_available,
+        'sequences_detail': sequences_detail,
+        'contrast_administered': contrast_administered,
+        'contrast_note': 'Gadolinium-based contrast agent (inferred from T1ce sequence presence)' if contrast_administered else 'No post-contrast imaging available',
+        'acquisition_parameters': {
+            'slice_thickness_mm': acquisition_details['slice_thickness_mm'],
+            'in_plane_resolution_mm': acquisition_details['in_plane_resolution_mm'],
+            'voxel_size_mm': acquisition_details['voxel_size_mm'],
+            'matrix_size': acquisition_details['matrix_size'],
+            'num_slices': acquisition_details['num_slices']
+        },
+        'sequences_not_available': ['DWI', 'ADC', 'MRS', 'Perfusion'],
+        'note': 'Acquisition parameters extracted from NIfTI headers; original scanner parameters may differ'
+    }
+    
     # Get tumor masks
     tumor_masks = get_tumor_masks(seg_data)
     
@@ -425,6 +522,7 @@ def analyze_sequence_findings(input_folder, segmentation_path, output_path=None)
     results = {
         'case_id': case_id,
         'step': 'Step 1 - Sequence-specific findings',
+        'technique': technique_section,
         'voxel_info': voxel_info,
         'region_signal_analysis': region_signals,
         'contrast_enhancement': enhancement_results,
