@@ -8,6 +8,8 @@ This script automates the complete workflow:
 3. Convert labels to match ground truth format
 4. Evaluate segmentation against ground truth
 5. Run feature extraction pipeline
+6. Generate Gemini radiology report
+7. Generate professional PDF report
 
 Usage:
     python run_full_pipeline.py <case_folder>
@@ -20,6 +22,8 @@ The case folder should contain BraTS 2025 format files:
     BraTS-GLI-XXXXX-XXX-t2w.nii.gz
     BraTS-GLI-XXXXX-XXX-t2f.nii.gz
     BraTS-GLI-XXXXX-XXX-seg.nii.gz (ground truth)
+
+Note: For Gemini report generation, add your API key in generate_report_gemini.py
 """
 
 import os
@@ -291,6 +295,79 @@ def run_feature_extraction(mri_folder, segmentation_file, output_folder):
     return output_folder
 
 
+def run_gemini_report(results_folder):
+    """
+    Generate radiology report using Gemini API.
+    
+    Returns:
+        Path to the generated report, or None if generation fails
+    """
+    results_folder = Path(results_folder)
+    
+    cmd = [
+        str(PYTHON_EXE),
+        str(SCRIPT_DIR / "generate_report_gemini.py"),
+        str(results_folder)
+    ]
+    
+    print(f"  🔄 Generating radiology report with Gemini API...")
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(SCRIPT_DIR))
+    
+    report_path = results_folder / "feature_extraction" / "radiology_report.txt"
+    
+    # Check if report was generated (primary success indicator)
+    if report_path.exists():
+        # Check if it was recently modified (within last minute)
+        import time
+        if (time.time() - report_path.stat().st_mtime) < 60:
+            return report_path
+    
+    # If report not found or not updated, check for errors
+    if result.returncode != 0:
+        print(f"  ⚠ Gemini report generation failed:")
+        # Check for API key error
+        if "API key" in result.stdout or "API key" in result.stderr:
+            print(f"     API key not configured. Edit generate_report_gemini.py to add your key.")
+        else:
+            # Filter out FutureWarning messages from error display
+            stderr_lines = [l for l in result.stderr.split('\n') if 'FutureWarning' not in l and l.strip()]
+            error_msg = '\n'.join(stderr_lines[:5]) if stderr_lines else 'Unknown error'
+            print(f"     {error_msg}")
+        return None
+    
+    return None
+
+
+def run_pdf_report(results_folder):
+    """
+    Generate professional PDF report from the text radiology report.
+    
+    Returns:
+        Path to the generated PDF, or None if generation fails
+    """
+    results_folder = Path(results_folder)
+    
+    cmd = [
+        str(PYTHON_EXE),
+        str(SCRIPT_DIR / "generate_pdf_report.py"),
+        str(results_folder)
+    ]
+    
+    print(f"  🔄 Generating professional PDF report...")
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(SCRIPT_DIR))
+    
+    if result.returncode != 0:
+        print(f"  ⚠ PDF generation failed:")
+        print(f"     {result.stderr[:200] if result.stderr else 'Unknown error'}")
+        return None
+    
+    pdf_path = results_folder / "feature_extraction" / "radiology_report.pdf"
+    if pdf_path.exists():
+        return pdf_path
+    
+    return None
+
+
 def run_pipeline(case_folder):
     """
     Run the complete analysis pipeline on a case folder.
@@ -396,6 +473,34 @@ def run_pipeline(case_folder):
     print(f"  📂 Output folder: {feature_output}")
     
     # =========================================================================
+    # STEP 6: Generate Gemini report
+    # =========================================================================
+    print_step(6, "GENERATING RADIOLOGY REPORT")
+    
+    gemini_report = run_gemini_report(results_folder)
+    
+    if gemini_report:
+        print(f"\n  ✅ Radiology report generated: {gemini_report.name}")
+    else:
+        print(f"\n  ⚠ Radiology report not generated (check API key in generate_report_gemini.py)")
+    
+    # =========================================================================
+    # STEP 7: Generate PDF report
+    # =========================================================================
+    print_step(7, "GENERATING PROFESSIONAL PDF REPORT")
+    
+    pdf_report = None
+    if gemini_report:
+        pdf_report = run_pdf_report(results_folder)
+        
+        if pdf_report:
+            print(f"\n  ✅ PDF report generated: {pdf_report.name}")
+        else:
+            print(f"\n  ⚠ PDF report not generated")
+    else:
+        print(f"\n  ⚠ Skipped (text report required first)")
+    
+    # =========================================================================
     # SUMMARY
     # =========================================================================
     pipeline_elapsed = time.time() - pipeline_start
@@ -407,8 +512,11 @@ def run_pipeline(case_folder):
     print(f"   • Segmentation: {seg_output}")
     print(f"   • Converted: {converted_file}")
     print(f"   • Feature extraction: {feature_output}")
-    print(f"   • Radiology report: {feature_output / 'radiology_report.txt'}")
     print(f"   • LLM-ready JSON: {feature_output / 'llm_ready_summary.json'}")
+    if gemini_report:
+        print(f"   • Radiology report: {gemini_report}")
+    if pdf_report:
+        print(f"   • PDF report: {pdf_report}")
     
     if metrics and 'mean_dice' in metrics:
         rating = "⭐ Excellent" if metrics['mean_dice'] >= 90 else \
@@ -429,6 +537,8 @@ def run_pipeline(case_folder):
         "converted_file": str(converted_file),
         "ground_truth_file": str(gt_file),
         "feature_extraction_folder": str(feature_output),
+        "gemini_report": str(gemini_report) if gemini_report else None,
+        "pdf_report": str(pdf_report) if pdf_report else None,
         "metrics": metrics
     }
     
@@ -459,6 +569,8 @@ Pipeline Steps:
   3. Convert labels to match ground truth format
   4. Evaluate segmentation (Dice, IoU, etc.)
   5. Run 6-step feature extraction pipeline
+  6. Generate radiology report (requires API key)
+  7. Generate professional PDF report
 
 Output:
   results/<CaseID>/
@@ -466,7 +578,8 @@ Output:
   ├── <CaseID>_brats.nii.gz        (converted labels)
   ├── pipeline_summary.json        (metrics & paths)
   └── feature_extraction/
-      ├── radiology_report.txt     (human-readable)
+      ├── radiology_report.txt     (AI-generated report)
+      ├── radiology_report.pdf     (professional PDF)
       ├── llm_ready_summary.json   (for LLM consumption)
       └── step1-6 JSON files       (detailed analysis)
         """
