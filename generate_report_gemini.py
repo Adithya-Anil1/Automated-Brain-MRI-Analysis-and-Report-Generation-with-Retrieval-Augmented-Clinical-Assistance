@@ -27,6 +27,20 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
+# Load environment variables from .env file if it exists
+def load_env_file():
+    """Load environment variables from .env file."""
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ.setdefault(key.strip(), value.strip())
+
+load_env_file()
+
 # Import template-based report generation
 from report_templates import (
     ReportTemplateFiller,
@@ -41,9 +55,14 @@ from report_templates import (
 )
 
 # ============================================================================
-# ADD YOUR GEMINI API KEY HERE (only needed if using --use-llm)
+# GEMINI API KEY CONFIGURATION
 # ============================================================================
-GEMINI_API_KEY = "AIzaSyDvj-ZfCCJv2tuzydb3Zh9T6Qk5hm97P0s"
+# The API key is loaded from environment variable or .env file
+# To set up:
+#   1. Create a .env file in the project root with: GEMINI_API_KEY=your_key_here
+#   2. Or set the environment variable: export GEMINI_API_KEY=your_key_here
+# ============================================================================
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # ============================================================================
 
 # Flag for Gemini availability
@@ -248,7 +267,7 @@ def main():
     print("Step 1: Rigid Template (human-written)")
     print("Step 2: Slot Specifications (constraints)")
     print("Step 3: Fact Extraction (deterministic, no LLM)")
-    print("Step 4: Facts → Slot Values (deterministic)")
+    print("Step 4: Facts -> Slot Values (deterministic)")
     print("-" * 50)
     
     print(f"\nSlot specifications: {len(SLOT_SPECIFICATIONS)} slots defined")
@@ -265,11 +284,11 @@ def main():
     
     # Report validation results
     if validation_log:
-        print(f"\n⚠ Validation found {len(validation_log)} issues (auto-corrected):")
+        print(f"\n[!] Validation found {len(validation_log)} issues (auto-corrected):")
         for entry in validation_log:
             print(f"  - {entry['slot']}: {entry['violations']}")
     else:
-        print("\n✓ All slots passed validation")
+        print("\n[OK] All slots passed validation")
     
     # Optionally refine with LLM
     if args.use_llm:

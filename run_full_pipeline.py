@@ -303,6 +303,10 @@ def run_gemini_report(results_folder):
         Path to the generated report, or None if generation fails
     """
     results_folder = Path(results_folder)
+    report_path = results_folder / "feature_extraction" / "radiology_report.txt"
+    
+    # Record modification time before running (feature extraction may have created one)
+    old_mtime = report_path.stat().st_mtime if report_path.exists() else 0
     
     cmd = [
         str(PYTHON_EXE),
@@ -310,21 +314,30 @@ def run_gemini_report(results_folder):
         str(results_folder)
     ]
     
-    print(f"  🔄 Generating radiology report with Gemini API...")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(SCRIPT_DIR))
+    print(f"  Generating radiology report with template system...")
+    # Use encoding='utf-8' and errors='replace' to handle Unicode characters on Windows
+    result = subprocess.run(
+        cmd, 
+        capture_output=True, 
+        text=True, 
+        encoding='utf-8',
+        errors='replace',
+        cwd=str(SCRIPT_DIR)
+    )
     
-    report_path = results_folder / "feature_extraction" / "radiology_report.txt"
-    
-    # Check if report was generated (primary success indicator)
-    if report_path.exists():
-        # Check if it was recently modified (within last minute)
-        import time
-        if (time.time() - report_path.stat().st_mtime) < 60:
-            return report_path
-    
-    # If report not found or not updated, check for errors
-    if result.returncode != 0:
-        print(f"  ⚠ Gemini report generation failed:")
+    # Check return code first (primary success indicator)
+    if result.returncode == 0:
+        # Verify file was actually updated
+        if report_path.exists():
+            new_mtime = report_path.stat().st_mtime
+            if new_mtime > old_mtime:
+                return report_path
+            else:
+                print(f"  Warning: Report file was not updated")
+        else:
+            print(f"  Warning: Report file not found after generation")
+    else:
+        print(f"  Warning: Report generation failed:")
         # Check for API key error
         if "API key" in result.stdout or "API key" in result.stderr:
             print(f"     API key not configured. Edit generate_report_gemini.py to add your key.")
@@ -333,7 +346,6 @@ def run_gemini_report(results_folder):
             stderr_lines = [l for l in result.stderr.split('\n') if 'FutureWarning' not in l and l.strip()]
             error_msg = '\n'.join(stderr_lines[:5]) if stderr_lines else 'Unknown error'
             print(f"     {error_msg}")
-        return None
     
     return None
 
@@ -353,11 +365,18 @@ def run_pdf_report(results_folder):
         str(results_folder)
     ]
     
-    print(f"  🔄 Generating professional PDF report...")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(SCRIPT_DIR))
+    print(f"  Generating professional PDF report...")
+    result = subprocess.run(
+        cmd, 
+        capture_output=True, 
+        text=True, 
+        encoding='utf-8',
+        errors='replace',
+        cwd=str(SCRIPT_DIR)
+    )
     
     if result.returncode != 0:
-        print(f"  ⚠ PDF generation failed:")
+        print(f"  Warning: PDF generation failed:")
         print(f"     {result.stderr[:200] if result.stderr else 'Unknown error'}")
         return None
     
