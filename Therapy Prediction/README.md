@@ -1,143 +1,119 @@
-# Therapy Response Prediction Module
-
-This module predicts therapy response (Regression/Stable/Progression) from pre-treatment brain MRI scans.
+# LUMIERE Therapy Response Prediction
 
 ## Overview
 
-The therapy response prediction pipeline analyzes pre-treatment MRI scans and predicts how the tumor will respond to therapy by comparing with post-treatment outcomes.
+This module processes the LUMIERE longitudinal glioma MRI dataset from the MICCAI Brain Tumor Progression Challenge to create a model-ready CSV for therapy response prediction.
 
-### Data Sources
+## Dataset Structure
 
-| Dataset | Role | Description |
-|---------|------|-------------|
-| BraTS2025-GLI-PRE-TrainingData | PRE-treatment | Input features for training |
-| BraTS2025-GLI-PRE-ValidationData | PRE-treatment | Input features for validation |
-| BraTS2024-BraTS-GLI-TrainingData | POST-treatment | Outcome measurement (ground truth) |
-| BraTS2024-BraTS-GLI-ValidationData | POST-treatment | Outcome measurement for validation |
-
-### Response Labels
-
-Labels are assigned based on tumor volume change between PRE and POST treatment:
-
-| Label | Criteria | Interpretation |
-|-------|----------|----------------|
-| **Regression** | Volume decrease > 25% | Tumor responded well to therapy |
-| **Stable** | Volume change ±25% | No significant change |
-| **Progression** | Volume increase > 25% | Tumor grew despite therapy |
-
-## Pipeline Phases
-
-### Phase 0: Label Generation (Current)
-
-Generate ground-truth response labels by comparing PRE and POST treatment tumor volumes.
+The LUMIERE dataset follows this structure:
 
 ```
-PRE-treatment MRI → Extract Volume → Compare → Response Label
-                                        ↑
-POST-treatment MRI → Extract Volume ────┘
+dataset/
+├── LUMIERE-ExpertRating-v202211.csv    # Expert RANO annotations
+├── Imaging-v202211.zip                  # Imaging data (31 GB)
+└── Imaging/                             # Extracted imaging data
+    └── Patient-XXX/
+        ├── week-000-1/                  # Baseline scan 1 (Pre-Op)
+        │   ├── T1.nii.gz
+        │   ├── CT1.nii.gz               # Contrast T1
+        │   ├── T2.nii.gz
+        │   ├── FLAIR.nii.gz
+        │   └── HD-GLIO-AUTO-segmentation/
+        │       └── registered/
+        │           └── segmentation.nii.gz
+        ├── week-000-2/                  # Baseline scan 2 (Post-Op)
+        ├── week-044/                    # Follow-up week 44
+        └── week-056/                    # Follow-up week 56
 ```
 
-### Phase 1: Feature Extraction (Planned)
+## Phase 0 - Dataset Preparation (No ML)
 
-Extract radiomic and deep learning features from PRE-treatment scans.
+The `prepare_lumiere_dataset.py` script creates a model-ready CSV by:
 
-### Phase 2: Model Training (Planned)
+1. **Identifying scans**: For each patient, finds baseline scans (`week-000-*`) and follow-up scans
+2. **Loading segmentations**: Uses HD-GLIO-AUTO or DeepBraTumIA automatic segmentations
+3. **Computing volumes**: Calculates whole tumor volume in milliliters
+4. **Calculating delta**: Computes relative volume change: `(FollowUp - Baseline) / Baseline`
+5. **Mapping RANO labels**: Simplifies expert ratings to three classes:
+   - **Response**: Complete Response (CR) or Partial Response (PR)
+   - **Stable**: Stable Disease (SD)
+   - **Progression**: Progressive Disease (PD)
 
-Train ML models to predict therapy response from PRE-treatment features only.
-
-### Phase 3: Inference (Planned)
-
-Predict therapy response for new patients using only PRE-treatment scans.
-
-## Quick Start
-
-### 1. Extract Datasets
+### Usage
 
 ```bash
-cd "Therapy Prediction"
-python extract_datasets.py
+# First, extract the imaging data (one-time, ~31 GB)
+python prepare_lumiere_dataset.py --extract
+
+# Or, if data is already extracted elsewhere
+python prepare_lumiere_dataset.py --data_dir /path/to/Imaging
+
+# Generate the output CSV
+python prepare_lumiere_dataset.py
 ```
 
-This extracts the zip files and organizes them into:
-- `data/pre_treatment/` - BraTS 2025 PRE scans
-- `data/post_treatment/` - BraTS 2024 POST scans
+### Output
 
-### 2. Generate Response Labels
+The script generates `lumiere_phase0.csv` with columns:
 
-```bash
-python generate_response_labels.py
-```
+| Column | Description |
+|--------|-------------|
+| `Patient_ID` | Patient identifier (e.g., Patient-001) |
+| `Baseline_Week` | Baseline scan week folder (e.g., week-000-1) |
+| `Followup_Week` | Follow-up scan week folder (e.g., week-044) |
+| `Baseline_Volume_ml` | Baseline tumor volume in milliliters |
+| `Followup_Volume_ml` | Follow-up tumor volume in milliliters |
+| `Delta_Volume` | Relative volume change: (followup - baseline) / baseline |
+| `Response_Label` | Simplified RANO label: Response, Stable, or Progression |
 
-This creates `response_labels.csv` with columns:
-- `Patient_ID` - Unique patient identifier
-- `Pre_Volume_ml` - Tumor volume before treatment (ml)
-- `Post_Volume_ml` - Tumor volume after treatment (ml)
-- `Volume_Change_Percent` - Percentage volume change
-- `Response_Label` - Regression/Stable/Progression
+### Label Distribution (Expected)
 
-### Custom Directories
+Based on the RANO ratings in the dataset:
+- **Progression (PD)**: ~253 timepoints
+- **Stable (SD)**: ~97 timepoints
+- **Response (CR + PR)**: ~47 timepoints
 
-```bash
-python generate_response_labels.py \
-    --pre_dir /path/to/pre \
-    --post_dir /path/to/post \
-    --output custom_labels.csv
-```
-
-## File Structure
-
-```
-Therapy Prediction/
-├── README.md                    # This file
-├── extract_datasets.py          # Dataset extraction script
-├── generate_response_labels.py  # Phase 0: Label generation
-├── response_labels.csv          # Generated labels (output)
-├── dataset/                     # Raw zip files
-│   ├── BraTS2025-GLI-PRE-Challenge-TrainingData (1).zip
-│   ├── BraTS2025-GLI-PRE-Challenge-ValidationData.zip
-│   ├── BraTS2024-BraTS-GLI-TrainingData.zip
-│   └── BraTS2024-BraTS-GLI-ValidationData.zip
-└── data/                        # Extracted data
-    ├── pre_treatment/           # PRE-treatment cases
-    │   ├── BraTS-GLI-00001-000/
-    │   └── ...
-    └── post_treatment/          # POST-treatment cases
-        ├── BraTS-GLI-00001-000/
-        └── ...
-```
+Note: Pre-Op and Post-Op ratings are excluded as they don't represent treatment response.
 
 ## Requirements
 
 - Python 3.8+
-- nibabel
 - numpy
+- pandas
+- nibabel
 
-Install dependencies:
+Install with:
 ```bash
-pip install nibabel numpy
+pip install numpy pandas nibabel
 ```
 
-## Technical Details
+## Next Steps (Future Phases)
 
-### Volume Calculation
+After Phase 0, you can train an XGBoost model:
 
-Whole tumor volume is computed as the sum of all tumor labels:
-- NCR (Necrotic Core) - Label 1
-- ED (Edema) - Label 2
-- ET (Enhancing Tumor) - Label 3 or 4
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
-Volume (ml) = Voxel Count × Voxel Volume (mm³) / 1000
+# Load the prepared data
+df = pd.read_csv('lumiere_phase0.csv')
 
-### Patient Matching
+# Features and labels
+X = df[['Baseline_Volume_ml', 'Followup_Volume_ml', 'Delta_Volume']]
+y = df['Response_Label']
 
-Patients are matched between PRE and POST datasets using the 5-digit patient ID extracted from folder names:
-- `BraTS-GLI-00001-000` → Patient ID: `00001`
-- `BraTS2024-GLI-00001-000` → Patient ID: `00001`
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-## Next Steps
+# Train XGBoost
+model = XGBClassifier()
+model.fit(X_train, y_train)
+```
 
-After generating labels, you can:
-1. Analyze the label distribution
-2. Extract features from PRE-treatment scans
-3. Train ML models for response prediction
-4. Validate on held-out test set
+## References
+
+- [LUMIERE Dataset](https://www.synapse.org/#!Synapse:syn51156910/wiki/)
+- [MICCAI BraTS Challenge](https://www.synapse.org/#!Synapse:syn51156910)
+- [RANO Criteria](https://doi.org/10.1200/JCO.2009.26.3988)
