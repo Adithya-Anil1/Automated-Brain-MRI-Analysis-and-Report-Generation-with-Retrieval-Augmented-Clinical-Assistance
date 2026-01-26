@@ -1,119 +1,83 @@
-# LUMIERE Therapy Response Prediction
+# 4-Level Therapy Prediction Framework
 
 ## Overview
 
-This module processes the LUMIERE longitudinal glioma MRI dataset from the MICCAI Brain Tumor Progression Challenge to create a model-ready CSV for therapy response prediction.
+This project implements a hierarchical AI pipeline for analyzing longitudinal Brain MRI (Glioblastoma) data from the BraTS 2025 (LUMIERE) dataset. The system moves from retrospective assessment to prospective prediction, with increasing layers of interpretability and complexity.
 
-## Dataset Structure
+## Level 1: Therapy Response Assessment (Retrospective)
+*"Did the tumor respond to treatment?"*
 
-The LUMIERE dataset follows this structure:
+**Goal:** Classify patient outcomes as "Progression" (Failure) or "Stable/Response" (Success) based on longitudinal changes.
 
-```
-dataset/
-├── LUMIERE-ExpertRating-v202211.csv    # Expert RANO annotations
-├── Imaging-v202211.zip                  # Imaging data (31 GB)
-└── Imaging/                             # Extracted imaging data
-    └── Patient-XXX/
-        ├── week-000-1/                  # Baseline scan 1 (Pre-Op)
-        │   ├── T1.nii.gz
-        │   ├── CT1.nii.gz               # Contrast T1
-        │   ├── T2.nii.gz
-        │   ├── FLAIR.nii.gz
-        │   └── HD-GLIO-AUTO-segmentation/
-        │       └── registered/
-        │           └── segmentation.nii.gz
-        ├── week-000-2/                  # Baseline scan 2 (Post-Op)
-        ├── week-044/                    # Follow-up week 44
-        └── week-056/                    # Follow-up week 56
-```
+**Input Data:**
+- Timepoint 1: Pre-treatment MRI (Baseline)
+- Timepoint 2: Post-treatment Follow-up MRI
+- Features: "Delta" features (Volume Change, Midline Shift Change, Necrosis Growth)
 
-## Phase 0 - Dataset Preparation (No ML)
+**Method:**
+- Rule-Based Logic: Immediate "Progression" flag if Midline Shift > 10mm or Volume Increase > 25%
+- XGBoost Classifier: Validates the assessment for borderline cases
 
-The `prepare_lumiere_dataset.py` script creates a model-ready CSV by:
+**Ground Truth:** RANO (Response Assessment in Neuro-Oncology) labels from the dataset
 
-1. **Identifying scans**: For each patient, finds baseline scans (`week-000-*`) and follow-up scans
-2. **Loading segmentations**: Uses HD-GLIO-AUTO or DeepBraTumIA automatic segmentations
-3. **Computing volumes**: Calculates whole tumor volume in milliliters
-4. **Calculating delta**: Computes relative volume change: `(FollowUp - Baseline) / Baseline`
-5. **Mapping RANO labels**: Simplifies expert ratings to three classes:
-   - **Response**: Complete Response (CR) or Partial Response (PR)
-   - **Stable**: Stable Disease (SD)
-   - **Progression**: Progressive Disease (PD)
+**Output:** Binary Classification (Progressive Disease vs. Stable Disease)
 
-### Usage
+## Level 2: Explainable AI (Evidence & Reasoning)
+*"Why did the model make this decision?"*
 
-```bash
-# First, extract the imaging data (one-time, ~31 GB)
-python prepare_lumiere_dataset.py --extract
+**Goal:** Convert "Black Box" predictions into clinically interpretable reasoning.
 
-# Or, if data is already extracted elsewhere
-python prepare_lumiere_dataset.py --data_dir /path/to/Imaging
+**Input Data:** The trained XGBoost models from Level 1 and Level 4.
 
-# Generate the output CSV
-python prepare_lumiere_dataset.py
-```
+**Method:**
+- SHAP (SHapley Additive exPlanations): Calculates the marginal contribution of each radiomic feature to the final prediction.
 
-### Output
+**Output:**
+- Feature Importance Plots: Global ranking of top biomarkers (e.g., "Necrosis Volume was the #1 predictor")
+- Individual Force Plots: Patient-specific explanations (e.g., "For Patient-007, high Sphericity pushed the probability towards 'Methylated'")
 
-The script generates `lumiere_phase0.csv` with columns:
+## Level 3: Uncertainty Quantification (Confidence)
+*"How sure is the system in this assessment?"*
 
-| Column | Description |
-|--------|-------------|
-| `Patient_ID` | Patient identifier (e.g., Patient-001) |
-| `Baseline_Week` | Baseline scan week folder (e.g., week-000-1) |
-| `Followup_Week` | Follow-up scan week folder (e.g., week-044) |
-| `Baseline_Volume_ml` | Baseline tumor volume in milliliters |
-| `Followup_Volume_ml` | Follow-up tumor volume in milliliters |
-| `Delta_Volume` | Relative volume change: (followup - baseline) / baseline |
-| `Response_Label` | Simplified RANO label: Response, Stable, or Progression |
+**Goal:** Prevent overconfidence in clinical decision support by flagging "Gray Zone" cases.
 
-### Label Distribution (Expected)
+**Input Data:** The raw probability scores (predict_proba) from the XGBoost models.
 
-Based on the RANO ratings in the dataset:
-- **Progression (PD)**: ~253 timepoints
-- **Stable (SD)**: ~97 timepoints
-- **Response (CR + PR)**: ~47 timepoints
+**Method:**
+- Confidence Stratification:
+  - High Confidence: Probability > 80% or < 20%
+  - Moderate Confidence: Probability 60-80% or 20-40%
+  - Indeterminate: Probability 40-60% (The "Gray Zone")
 
-Note: Pre-Op and Post-Op ratings are excluded as they don't represent treatment response.
+**Output:** A confidence band accompanying every prediction (e.g., "Prediction: Methylated (Moderate Confidence)")
 
-## Requirements
+## Level 4: Early Molecular Prediction (Prospective)
+*"Will the tumor respond to therapy? (The Virtual Biopsy)"*
 
-- Python 3.8+
-- numpy
-- pandas
-- nibabel
+**Goal:** Predict the tumor's genetic sensitivity to chemotherapy before treatment begins.
 
-Install with:
-```bash
-pip install numpy pandas nibabel
-```
+**Input Data:**
+- Timepoint 1 ONLY: Pre-treatment MRI (Baseline)
+- Features: Static Radiomics (Texture Heterogeneity, Shape Irregularity, Intensity distributions)
+- Target Label: MGMT Promoter Methylation Status (Methylated = Sensitive, Unmethylated = Resistant)
 
-## Next Steps (Future Phases)
+**Method:**
+- Radiogenomics: Train XGBoost to map imaging phenotypes to genetic genotypes
+- Validation: Leave-One-Out Cross-Validation (LOOCV) due to dataset size (N=80)
 
-After Phase 0, you can train an XGBoost model:
+**Output:** "Predicted MGMT Status" (Chemo-Sensitive vs. Chemo-Resistant)
 
-```python
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from xgboost import XGBClassifier
+## Dataset Specifications (BraTS 2025 / LUMIERE)
 
-# Load the prepared data
-df = pd.read_csv('lumiere_phase0.csv')
+**Source:** LUMIERE Dataset (Longitudinal Glioblastoma MRI with Expert RANO Evaluation)
 
-# Features and labels
-X = df[['Baseline_Volume_ml', 'Followup_Volume_ml', 'Delta_Volume']]
-y = df['Response_Label']
+**Sample Size:** ~91 Patients total
 
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+**Level 1 Subset:** Patients with valid Pre+Post pairs (~91 cases)
 
-# Train XGBoost
-model = XGBClassifier()
-model.fit(X_train, y_train)
-```
+**Level 4 Subset:** Patients with valid MGMT labels (~80 cases: 37 Methylated, 43 Unmethylated)
 
-## References
-
-- [LUMIERE Dataset](https://www.synapse.org/#!Synapse:syn51156910/wiki/)
-- [MICCAI BraTS Challenge](https://www.synapse.org/#!Synapse:syn51156910)
-- [RANO Criteria](https://doi.org/10.1200/JCO.2009.26.3988)
+**Key Files:**
+- Imaging-v202211: Raw NIfTI MRI scans
+- LUMIERE-ExpertRating.csv: RANO labels (Target for Level 1)
+- LUMIERE_dataset_-_Demographics_and_pathology_information.csv: MGMT labels (Target for Level 4)
