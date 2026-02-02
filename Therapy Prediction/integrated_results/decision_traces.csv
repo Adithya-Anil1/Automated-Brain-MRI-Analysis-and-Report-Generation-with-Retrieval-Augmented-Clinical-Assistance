@@ -1,0 +1,664 @@
+Patient_ID,Decision_Trace
+Patient-001,"Step 1: Level 1 → NON-PROGRESSION (conf=84.9%)
+        Reason: Volume decreased by 11.7ml (69.7%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 15.7ml; TC fraction decreased; WT decreased 69.7%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (4 scans): TC slope negative (-0.41 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 94.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 94.5%)"
+Patient-002,"Step 1: Level 1 → PROGRESSION (conf=83.8%)
+        Reason: Volume increased by 17.5ml (67.6%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 5.1ml (+54.7%); WT increased +67.6%
+Step 3: Level 3 → PROGRESSION (conf=76.7%)
+        Reason: Temporal trend (6 scans): TC increasing 60% of intervals; Net WT increase +68%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 91.5%
+
+✓ FINAL: PROGRESSION (confidence 91.5%)"
+Patient-003,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 99.0ml (393.0%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 53.2ml (+215.3%); TC fraction decreased; WT increased +393.0%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (1.22 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.3%
+
+✓ FINAL: PROGRESSION (confidence 86.3%)"
+Patient-004,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: +8.0%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → NON-PROGRESSION (conf=74.0%)
+        Reason: Temporal trend (8 scans): TC slope negative (-0.26 ml/week); TC increasing 57% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 50.0% → 61.1%
+
+✓ FINAL: NON-PROGRESSION (confidence 61.1%)"
+Patient-005,"Step 1: Level 1 → NON-PROGRESSION (conf=67.4%)
+        Reason: Volume decreased by 15.3ml (34.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 15.9ml; WT decreased 34.9%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (3 scans): TC slope negative (-1.66 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.5%)"
+Patient-006,"Step 1: Level 1 → NON-PROGRESSION (conf=92.4%)
+        Reason: Volume decreased by 183.8ml (84.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 145.8ml; WT decreased 84.9%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (14 scans): TC slope negative (-0.48 ml/week); Net WT decrease -85%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-007,"Step 1: Level 1 → NON-PROGRESSION (conf=77.6%)
+        Reason: Volume decreased by 62.4ml (55.2%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 65.0ml; TC fraction decreased; WT decreased 55.2%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (10 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 89.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 89.5%)"
+Patient-008,"Step 1: Level 1 → NON-PROGRESSION (conf=90.2%)
+        Reason: Volume decreased by 94.5ml (80.3%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 83.6ml; WT decreased 80.3%
+Step 3: Level 3 → NON-PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (5 scans): TC slope negative (-0.73 ml/week); TC increasing only 25% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.3%)"
+Patient-009,"Step 1: Level 1 → NON-PROGRESSION (conf=66.2%)
+        Reason: Volume decreased by 8.5ml (32.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 10.9ml; WT decreased 32.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (6 scans): TC slope negative (-0.43 ml/week); Net WT decrease -69%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-010,"Step 1: Level 1 → NON-PROGRESSION (conf=91.1%)
+        Reason: Volume decreased by 70.3ml (82.3%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 48.8ml; WT decreased 82.3%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (3 scans): TC slope negative (-2.74 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.5%)"
+Patient-011,"Step 1: Level 1 → PROGRESSION (conf=80.1%)
+        Reason: Volume increased by 22.6ml (60.2%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 22.4ml (+71.9%); WT increased +60.2%
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (5 scans): TC slope positive (0.65 ml/week); Net WT increase +60%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: PROGRESSION (confidence 92.0%)"
+Patient-012,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 57.0ml (771.8%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 55.7ml (+754.1%); WT increased +771.8%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (7 scans): TC slope positive (0.70 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.6%
+
+✓ FINAL: PROGRESSION (confidence 92.6%)"
+Patient-013,"Step 1: Level 1 → NON-PROGRESSION (conf=89.8%)
+        Reason: Volume decreased by 93.2ml (79.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 75.5ml; WT decreased 79.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (4 scans): TC slope negative (-1.84 ml/week); Net WT decrease -80%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-014,"Step 1: Level 1 → NON-PROGRESSION (conf=95.0%)
+        Reason: Volume decreased by 102.1ml (93.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 74.2ml; TC fraction increased +25.5pp; WT decreased 93.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (3 scans): TC slope negative (-5.34 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 86.5%)"
+Patient-015,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 97.4ml (409.5%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 75.1ml (+316.0%); TC fraction decreased; WT increased +409.5%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (14 scans): TC slope positive (0.29 ml/week); TC increasing 54% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.6%
+
+✓ FINAL: PROGRESSION (confidence 86.6%)"
+Patient-017,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 87.1ml (268.3%)
+Step 2: Level 2 → PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC increased 82.5ml (+358.2%); TC fraction increased +17.3pp; WT increased +268.3%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (2.50 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 94.3%
+
+✓ FINAL: PROGRESSION (confidence 94.3%)"
+Patient-018,"Step 1: Level 1 → NON-PROGRESSION (conf=77.9%)
+        Reason: Volume decreased by 7.8ml (55.8%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 7.1ml; WT decreased 55.8%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (6 scans): TC slope negative (-0.10 ml/week); Net WT decrease -56%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-021,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -12.1%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (0.30 ml/week); TC increasing 67% of intervals
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 50.0% → 34.0%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+⚠ FINAL: UNCERTAIN (confidence 34.0% < 45% threshold)"
+Patient-022,"Step 1: Level 1 → NON-PROGRESSION (conf=70.8%)
+        Reason: Volume decreased by 46.1ml (41.7%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 19.4ml; WT decreased 41.7%
+Step 3: Level 3 → NON-PROGRESSION (conf=70.0%)
+        Reason: Temporal trend (6 scans): Net WT decrease -42%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 90.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 90.5%)"
+Patient-023,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 168.0ml (793.2%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 112.4ml (+687.0%); WT increased +793.2%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (12 scans): TC slope positive (0.33 ml/week); TC increasing 73% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.6%
+
+✓ FINAL: PROGRESSION (confidence 92.6%)"
+Patient-025,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 129.9ml (857.9%)
+Step 2: Level 2 → PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC increased 117.3ml (+1225.6%); TC fraction increased +24.3pp; WT increased +857.9%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (8 scans): TC slope positive (1.02 ml/week); TC increasing 71% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 94.6%
+
+✓ FINAL: PROGRESSION (confidence 94.6%)"
+Patient-027,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 50.5ml (200.0%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 37.7ml (+149.3%); TC fraction decreased; WT increased +200.0%
+Step 3: Level 3 → PROGRESSION (conf=76.7%)
+        Reason: Temporal trend (3 scans): TC slope positive (1.79 ml/week)
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 85.5%
+
+✓ FINAL: PROGRESSION (confidence 85.5%)"
+Patient-028,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -15.7%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 38.6ml; TC fraction decreased
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (9 scans): TC slope negative (-2.10 ml/week); Net WT decrease -53%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-029,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: +12.4%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → PROGRESSION (conf=76.7%)
+        Reason: Temporal trend (14 scans): 3 consecutive TC increases
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 50.0% → 34.7%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+⚠ FINAL: UNCERTAIN (confidence 34.7% < 45% threshold)"
+Patient-030,"Step 1: Level 1 → PROGRESSION (conf=83.3%)
+        Reason: Volume increased by 20.2ml (66.6%)
+Step 2: Level 2 → PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC increased 15.8ml (+128.8%); TC fraction increased +15.1pp; WT increased +66.6%
+Step 3: Level 3 → PROGRESSION (conf=74.0%)
+        Reason: Temporal trend (8 scans): TC slope positive (0.24 ml/week); TC increasing only 29% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 93.1%
+
+✓ FINAL: PROGRESSION (confidence 93.1%)"
+Patient-031,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 126.3ml (199.1%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 96.4ml (+183.3%); WT increased +199.1%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (18 scans): TC slope positive (0.22 ml/week); TC increasing 65% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.6%
+
+✓ FINAL: PROGRESSION (confidence 92.6%)"
+Patient-032,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 7.6ml (91.9%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 7.6ml (+91.9%); WT increased +91.9%
+Step 3: Level 3 → PROGRESSION (conf=74.0%)
+        Reason: Temporal trend (13 scans): TC increasing 67% of intervals; 3 consecutive TC increases
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 91.1%
+
+✓ FINAL: PROGRESSION (confidence 91.1%)"
+Patient-033,"Step 1: Level 1 → NON-PROGRESSION (conf=81.5%)
+        Reason: Volume decreased by 36.0ml (62.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 26.8ml; WT decreased 62.9%
+Step 3: Level 3 → PROGRESSION (conf=70.0%)
+        Reason: Temporal trend (10 scans): TC increasing 56% of intervals
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 80.0% → 66.0%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+✓ FINAL: NON-PROGRESSION (confidence 66.0%)"
+Patient-034,"Step 1: Level 1 → NON-PROGRESSION (conf=80.4%)
+        Reason: Volume decreased by 55.5ml (60.8%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 55.6ml; WT decreased 60.8%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (7 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 87.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 87.5%)"
+Patient-035,"Step 1: Level 1 → PROGRESSION (conf=94.5%)
+        Reason: Volume increased by 63.7ml (89.0%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 23.8ml (+33.2%); TC fraction decreased; WT increased +89.0%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (6 scans): TC slope positive (0.29 ml/week); TC increasing 80% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.6%
+
+✓ FINAL: PROGRESSION (confidence 86.6%)"
+Patient-036,"Step 1: Level 1 → NON-PROGRESSION (conf=95.0%)
+        Reason: Volume decreased by 6.7ml (92.1%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 1.3ml; TC fraction increased +74.5pp; WT decreased 92.1%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (3 scans): TC slope negative (-0.23 ml/week); Net WT decrease -92%
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 86.0%)"
+Patient-037,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 34.9ml (96.2%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 35.8ml (+103.4%); WT increased +96.2%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (7 scans): TC slope positive (1.35 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: PROGRESSION (confidence 92.3%)"
+Patient-038,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: +8.0%)
+Step 2: Level 2 → PROGRESSION (conf=76.7%)
+        Reason: Region evidence: TC increased 6.7ml (+18.4%)
+        ⚡ L2 OVERRIDES L1 (L1=0, L2=1)
+Step 3: Level 3 → PROGRESSION (conf=76.7%)
+        Reason: Temporal trend (3 scans): TC slope positive (0.71 ml/week)
+        ✓ L3 AGREES with L2 → Confidence increased 76.7% → 88.2%
+
+✓ FINAL: PROGRESSION (confidence 88.2%)"
+Patient-039,"Step 1: Level 1 → NON-PROGRESSION (conf=64.8%)
+        Reason: Volume decreased by 20.8ml (29.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 45.4ml; TC fraction decreased
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (4 scans): TC slope negative (-1.49 ml/week); Net WT decrease -63%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-040,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 146.7ml (851.5%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 121.7ml (+730.9%); WT increased +851.5%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (5.06 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: PROGRESSION (confidence 92.3%)"
+Patient-041,"Step 1: Level 1 → NON-PROGRESSION (conf=95.0%)
+        Reason: Volume decreased by 88.2ml (92.2%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 28.0ml; TC fraction increased +57.0pp; WT decreased 92.2%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (4 scans): TC slope negative (-0.61 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 86.5%)"
+Patient-042,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 118.7ml (377.6%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 80.5ml (+256.0%); TC fraction decreased; WT increased +377.6%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (14 scans): TC slope positive (0.65 ml/week); TC increasing 69% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.6%
+
+✓ FINAL: PROGRESSION (confidence 86.6%)"
+Patient-043,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 45.1ml (2532.0%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 33.9ml (+2087.3%); TC fraction decreased; WT increased +2532.0%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (12 scans): TC slope positive (0.21 ml/week); TC increasing 73% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.6%
+
+✓ FINAL: PROGRESSION (confidence 86.6%)"
+Patient-045,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 34.7ml (441.6%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 33.1ml (+421.0%); WT increased +441.6%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (4 scans): TC slope positive (1.08 ml/week); TC increasing 100% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.6%
+
+✓ FINAL: PROGRESSION (confidence 92.6%)"
+Patient-046,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 56.2ml (549.2%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 40.7ml (+628.4%); WT increased +549.2%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (0.61 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: PROGRESSION (confidence 92.3%)"
+Patient-048,"Step 1: Level 1 → PROGRESSION (conf=55.6%)
+        Reason: Volume increased by 7.3ml (11.3%)
+Step 2: Level 2 → NON-PROGRESSION (conf=70.0%)
+        Reason: Region evidence: TC fraction decreased
+        ⚡ L2 OVERRIDES L1 (L1=1, L2=0)
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (6 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 70.0% → 77.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 77.5%)"
+Patient-049,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 190.9ml (1136.4%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 158.5ml (+1201.3%); WT increased +1136.4%
+Step 3: Level 3 → PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope positive (3.14 ml/week); TC increasing 67% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: PROGRESSION (confidence 92.3%)"
+Patient-050,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 179.4ml (427.5%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 136.0ml (+377.9%); WT increased +427.5%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (5 scans): TC slope positive (1.97 ml/week); TC increasing 75% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.6%
+
+✓ FINAL: PROGRESSION (confidence 92.6%)"
+Patient-051,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -0.2%)
+Step 2: Level 2 → NON-PROGRESSION (conf=70.0%)
+        Reason: Region evidence: TC fraction decreased
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (10 scans): TC slope negative (-0.34 ml/week); Net WT decrease -52%
+        ✓ L3 AGREES with L2 → Confidence increased 70.0% → 82.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 82.0%)"
+Patient-052,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -20.0%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (8 scans): TC increasing 71% of intervals; 3 consecutive TC increases
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 50.0% → 34.0%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+⚠ FINAL: UNCERTAIN (confidence 34.0% < 45% threshold)"
+Patient-055,"Step 1: Level 1 → NON-PROGRESSION (conf=76.0%)
+        Reason: Volume decreased by 68.6ml (51.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 95.8ml; TC fraction decreased; WT decreased 51.9%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (10 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 89.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 89.5%)"
+Patient-059,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 13.1ml (152.1%)
+Step 2: Level 2 → PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC increased 17.1ml (+422.0%); TC fraction increased +50.5pp; WT increased +152.1%
+Step 3: Level 3 → PROGRESSION (conf=70.0%)
+        Reason: Temporal trend (11 scans): Net WT increase +152%
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 92.5%
+
+✓ FINAL: PROGRESSION (confidence 92.5%)"
+Patient-060,"Step 1: Level 1 → NON-PROGRESSION (conf=83.8%)
+        Reason: Volume decreased by 48.3ml (67.6%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 35.1ml; TC fraction increased +15.8pp; WT decreased 67.6%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (9 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 81.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 81.5%)"
+Patient-061,"Step 1: Level 1 → PROGRESSION (conf=93.8%)
+        Reason: Volume increased by 68.6ml (87.6%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 62.5ml (+79.9%); WT increased +87.6%
+Step 3: Level 3 → PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (8 scans): TC slope positive (0.36 ml/week); TC increasing 71% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.5%
+
+✓ FINAL: PROGRESSION (confidence 92.5%)"
+Patient-062,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 55.6ml (121.3%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 51.4ml (+112.7%); WT increased +121.3%
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (8 scans): TC increasing 71% of intervals; 5 consecutive TC increases
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: PROGRESSION (confidence 92.0%)"
+Patient-064,"Step 1: Level 1 → NON-PROGRESSION (conf=78.2%)
+        Reason: Volume decreased by 46.9ml (56.4%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 46.8ml; WT decreased 56.4%
+Step 3: Level 3 → NON-PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (6 scans): TC slope negative (-0.56 ml/week); TC increasing only 20% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.3%)"
+Patient-065,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 90.6ml (312.3%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 13.7ml (+47.7%); TC fraction decreased; WT increased +312.3%
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (7 scans): TC slope positive (1.19 ml/week); Net WT increase +312%
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.0%
+
+✓ FINAL: PROGRESSION (confidence 86.0%)"
+Patient-066,"Step 1: Level 1 → NON-PROGRESSION (conf=90.6%)
+        Reason: Volume decreased by 173.4ml (81.2%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 125.0ml; TC fraction increased +21.0pp; WT decreased 81.2%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (9 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 81.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 81.5%)"
+Patient-067,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 137.6ml (2225.9%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 81.9ml (+1324.0%); TC fraction decreased; WT increased +2225.9%
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (20 scans): TC slope positive (0.38 ml/week); TC increasing 63% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.6%
+
+✓ FINAL: PROGRESSION (confidence 86.6%)"
+Patient-068,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 149.7ml (2008.6%)
+Step 2: Level 2 → PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC increased 43.1ml (+577.8%); TC fraction decreased; WT increased +2008.6%
+Step 3: Level 3 → PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (7 scans): TC slope positive (0.68 ml/week); Net WT increase +544%
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.0%
+
+✓ FINAL: PROGRESSION (confidence 86.0%)"
+Patient-071,"Step 1: Level 1 → NON-PROGRESSION (conf=69.0%)
+        Reason: Volume decreased by 51.3ml (38.0%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 83.9ml; TC fraction decreased; WT decreased 38.0%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (7 scans): TC slope negative (-1.23 ml/week); Net WT decrease -59%
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 94.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 94.0%)"
+Patient-072,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -8.0%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → PROGRESSION (conf=84.3%)
+        Reason: Temporal trend (14 scans): TC slope positive (0.36 ml/week); TC increasing 62% of intervals
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 50.0% → 33.1%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+⚠ FINAL: UNCERTAIN (confidence 33.1% < 45% threshold)"
+Patient-073,"Step 1: Level 1 → NON-PROGRESSION (conf=81.4%)
+        Reason: Volume decreased by 115.1ml (62.7%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 93.4ml; WT decreased 62.7%
+Step 3: Level 3 → PROGRESSION (conf=74.0%)
+        Reason: Temporal trend (18 scans): TC increasing 53% of intervals; 4 consecutive TC increases
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 80.0% → 65.2%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+✓ FINAL: NON-PROGRESSION (confidence 65.2%)"
+Patient-074,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -19.1%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 14.3ml; TC fraction decreased
+Step 3: Level 3 → NON-PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (4 scans): TC slope negative (-0.34 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.3%)"
+Patient-075,"Step 1: Level 1 → PROGRESSION (conf=95.0%)
+        Reason: Volume increased by 19.1ml (115.9%)
+Step 2: Level 2 → PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC increased 22.0ml (+168.5%); TC fraction increased +19.4pp; WT increased +115.9%
+Step 3: Level 3 → PROGRESSION (conf=74.0%)
+        Reason: Temporal trend (5 scans): TC slope positive (0.79 ml/week); TC increasing only 25% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 93.1%
+
+✓ FINAL: PROGRESSION (confidence 93.1%)"
+Patient-077,"Step 1: Level 1 → NON-PROGRESSION (conf=73.9%)
+        Reason: Volume decreased by 78.9ml (47.8%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 101.6ml; TC fraction decreased; WT decreased 47.8%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (9 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 89.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 89.5%)"
+Patient-078,"Step 1: Level 1 → NON-PROGRESSION (conf=75.4%)
+        Reason: Volume decreased by 58.1ml (50.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 40.6ml; WT decreased 50.9%
+Step 3: Level 3 → PROGRESSION (conf=70.0%)
+        Reason: Temporal trend (17 scans): 4 consecutive TC increases; Net WT decrease -51%
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 80.0% → 66.0%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+✓ FINAL: NON-PROGRESSION (confidence 66.0%)"
+Patient-080,"Step 1: Level 1 → NON-PROGRESSION (conf=85.7%)
+        Reason: Volume decreased by 47.8ml (71.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=74.0%)
+        Reason: Region evidence: TC decreased 25.0ml; TC fraction increased +32.9pp; WT decreased 71.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (3 scans): TC slope negative (-1.73 ml/week); Net WT decrease -71%
+        ✓ L3 AGREES with L2 → Confidence increased 74.0% → 86.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 86.0%)"
+Patient-081,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -20.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 32.1ml; TC fraction decreased
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (3 scans): TC slope negative (-6.97 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.5%)"
+Patient-082,"Step 1: Level 1 → NON-PROGRESSION (conf=95.0%)
+        Reason: Volume decreased by 105.9ml (92.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=82.0%)
+        Reason: Region evidence: TC decreased 109.1ml; TC fraction decreased; WT decreased 92.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=83.3%)
+        Reason: Temporal trend (3 scans): TC slope negative (-45.76 ml/week); TC increasing only 0% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 82.0% → 94.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 94.5%)"
+Patient-083,"Step 1: Level 1 → NON-PROGRESSION (conf=84.5%)
+        Reason: Volume decreased by 126.7ml (69.0%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 102.6ml; WT decreased 69.0%
+Step 3: Level 3 - NO DATA (patient has <3 scans)
+
+✓ FINAL: NON-PROGRESSION (confidence 80.0%)"
+Patient-084,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -23.4%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 41.4ml; TC fraction decreased
+Step 3: Level 3 - NO DATA (patient has <3 scans)
+
+✓ FINAL: NON-PROGRESSION (confidence 80.0%)"
+Patient-085,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: +5.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (6 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 50.0% → 57.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 57.5%)"
+Patient-086,"Step 1: Level 1 → NON-PROGRESSION (conf=55.0%)
+        Reason: Volume stable (change: -22.9%)
+Step 2: Level 2 → NON-PROGRESSION (conf=50.0%)
+        Reason: Region evidence inconclusive
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (7 scans) inconclusive
+        ✓ L3 AGREES with L2 → Confidence increased 50.0% → 57.5%
+
+✓ FINAL: NON-PROGRESSION (confidence 57.5%)"
+Patient-087,"Step 1: Level 1 → NON-PROGRESSION (conf=79.7%)
+        Reason: Volume decreased by 11.6ml (59.5%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 10.9ml; WT decreased 59.5%
+Step 3: Level 3 → NON-PROGRESSION (conf=80.0%)
+        Reason: Temporal trend (3 scans): TC slope negative (-0.29 ml/week); Net WT decrease -66%
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.0%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.0%)"
+Patient-089,"Step 1: Level 1 → NON-PROGRESSION (conf=89.3%)
+        Reason: Volume decreased by 80.1ml (78.7%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 82.2ml; WT decreased 78.7%
+Step 3: Level 3 → NON-PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (6 scans): TC slope negative (-1.75 ml/week); TC increasing only 20% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.3%)"
+Patient-090,"Step 1: Level 1 → PROGRESSION (conf=73.9%)
+        Reason: Volume increased by 4.9ml (47.7%)
+Step 2: Level 2 → PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC increased 4.9ml (+48.2%); WT increased +47.7%
+Step 3: Level 3 → NON-PROGRESSION (conf=50.0%)
+        Reason: Temporal trend (3 scans) inconclusive
+        ⚠ L3 CONFLICTS with L2 → Confidence decreased 80.0% → 70.0%
+        ⚠ Decision UNCHANGED (L2 stands, L3 only adjusts confidence)
+
+✓ FINAL: PROGRESSION (confidence 70.0%)"
+Patient-091,"Step 1: Level 1 → NON-PROGRESSION (conf=78.9%)
+        Reason: Volume decreased by 29.1ml (57.8%)
+Step 2: Level 2 → NON-PROGRESSION (conf=80.0%)
+        Reason: Region evidence: TC decreased 28.4ml; WT decreased 57.8%
+Step 3: Level 3 → NON-PROGRESSION (conf=82.0%)
+        Reason: Temporal trend (6 scans): TC slope negative (-0.60 ml/week); TC increasing only 20% of intervals
+        ✓ L3 AGREES with L2 → Confidence increased 80.0% → 92.3%
+
+✓ FINAL: NON-PROGRESSION (confidence 92.3%)"
