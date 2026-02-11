@@ -283,7 +283,7 @@ Answer using ONLY the provided context.
 def build_prompt(
     user_query: str,
     patient_report: str,
-    retrieved_definitions: List[Tuple[dict, float]],
+    retrieved_definitions,
 ) -> str:
     """
     Assemble the strict RAG prompt from the patient report and the
@@ -295,9 +295,9 @@ def build_prompt(
         The user's question.
     patient_report : str
         Full text of the patient's generated MRI report.
-    retrieved_definitions : list
-        Output of ``DummyVectorStore.retrieve()``  —  list of
-        (document_dict, score) tuples.
+    retrieved_definitions
+        Either ChromaDB query results (dict with 'documents', 'metadatas')
+        or legacy DummyVectorStore results (list of tuples).
 
     Returns
     -------
@@ -306,11 +306,22 @@ def build_prompt(
     """
     # Format retrieved definitions into a readable block
     def_lines: List[str] = []
-    for doc, score in retrieved_definitions:
-        term = doc.get("term", "Definition")
-        text = doc["text"]
-        def_lines.append(f"- **{term}**: {text}")
-    definitions_block = "\n".join(def_lines) if def_lines else "No definitions retrieved."
+
+    if isinstance(retrieved_definitions, dict):
+        # ChromaDB results format
+        docs = retrieved_definitions.get("documents", [[]])[0]
+        metas = retrieved_definitions.get("metadatas", [[]])[0]
+        for doc_text, meta in zip(docs, metas):
+            title = meta.get("title", "Definition")
+            def_lines.append(f"- {title}:\n{doc_text}")
+    else:
+        # Legacy DummyVectorStore format: list of (doc_dict, score)
+        for doc, score in retrieved_definitions:
+            term = doc.get("term", "Definition")
+            text = doc["text"]
+            def_lines.append(f"- {term}: {text}")
+
+    definitions_block = "\n\n".join(def_lines) if def_lines else "No definitions retrieved."
 
     prompt = PROMPT_TEMPLATE.format(
         patient_report=patient_report.strip(),
@@ -352,7 +363,7 @@ def call_gemini(prompt: str) -> str:
     model = genai.GenerativeModel(model_name="gemini-3-flash-preview")
     generation_config = genai.types.GenerationConfig(
         temperature=0.1,       # Low temperature — factual, deterministic
-        max_output_tokens=300, # Enough for 3-4 concise sentences
+        max_output_tokens=1024, # Enough for 3-4 complete sentences
     )
 
     try:
@@ -407,11 +418,21 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
     # ------------------------------------------------------------------
     # Step 2: RETRIEVE relevant medical definitions (Source B)
     # ------------------------------------------------------------------
-    # Initialise the dummy vector store with our verified definitions
-    vector_store = init_vector_store()
-
-    # Retrieve the top-2 most relevant definitions for the query
-    retrieved = vector_store.retrieve(query=user_query, top_k=2)
+    # Try ChromaDB vector store first (full knowledge base),
+    # fall back to dummy in-memory store if ChromaDB is unavailable.
+    retrieved = None
+    try:
+        from RAG_Assistant.vector_store_builder import load_vector_store
+        collection = load_vector_store()
+        retrieved = collection.query(
+            query_texts=[user_query],
+            n_results=2,
+            include=["documents", "metadatas", "distances"],
+        )
+    except Exception:
+        # Fall back to dummy vector store
+        vector_store = init_vector_store()
+        retrieved = vector_store.retrieve(query=user_query, top_k=2)
 
     # ------------------------------------------------------------------
     # Step 3: BUILD PROMPT with both data sources
@@ -444,22 +465,21 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
 if __name__ == "__main__":
 
     # --- Sample patient report (for demo purposes) ----------------------
-    SAMPLE_REPORT = """\
-FINDINGS:
-A heterogeneously enhancing mass is identified in the right temporal lobe,
-measuring approximately 45 x 38 x 42 mm.  The lesion demonstrates central
-necrosis with irregular peripheral enhancement on post-contrast T1-weighted
-images. Surrounding peritumoral edema extends into the adjacent white matter,
-appearing hyperintense on T2/FLAIR sequences. There is approximately 4 mm
-of midline shift from right to left. The ventricles are mildly compressed
-on the right side. No additional enhancing lesions are identified.
-
-VOLUMES:
-- Enhancing tumor:    12.4 cm³
-- Non-enhancing tumor: 8.7 cm³
-- Peritumoral edema:  34.2 cm³
-- Total lesion:       55.3 cm³
-"""
+    # --- Load a real patient report from results/ -----------------------
+    import os
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    _PROJECT_DIR = os.path.dirname(_SCRIPT_DIR)
+    _REPORT_PATH = os.path.join(
+        _PROJECT_DIR, "results", "BraTS-GLI-00005-000",
+        "feature_extraction", "radiology_report.txt"
+    )
+    try:
+        with open(_REPORT_PATH, "r", encoding="utf-8") as f:
+            SAMPLE_REPORT = f.read()
+        print(f"  Loaded real report: {_REPORT_PATH}")
+    except FileNotFoundError:
+        print(f"  ⚠ Report not found at {_REPORT_PATH}, using fallback.")
+        SAMPLE_REPORT = "(No patient report available.)"
 
     # --- Demo queries (safe + blocked) ----------------------------------
     demo_queries = [
@@ -472,11 +492,25 @@ VOLUMES:
     ]
 
     print("=" * 70)
-    print("  RAG Educational Assistant — Demo")
+    print("  RAG Educational Assistant — Interactive Mode")
+    print("=" * 70)
+    print(f"\n  Report: BraTS-GLI-00005-000")
+    print(f"  Volumes: WT=118.4 cm³, ET=24.1 cm³, ED=69.9 cm³")
+    print(f"\n  Type 'quit' or 'exit' to stop")
     print("=" * 70)
 
-    for q in demo_queries:
-        print(f"\n📌  Q: {q}")
-        ans = answer_query(user_query=q, patient_report_text=SAMPLE_REPORT)
-        print(f"💬  A: {ans}")
+    import time
+    while True:
+        print("\n" + "-" * 70)
+        user_input = input("\n💬 Your question: ").strip()
+        
+        if not user_input:
+            continue
+        
+        if user_input.lower() in ['quit', 'exit', 'q']:
+            print("\n👋 Done!")
+            break
+        
+        ans = answer_query(user_query=user_input, patient_report_text=SAMPLE_REPORT)
+        print(f"\n📚 Answer:\n{ans}")
         print("-" * 70)
