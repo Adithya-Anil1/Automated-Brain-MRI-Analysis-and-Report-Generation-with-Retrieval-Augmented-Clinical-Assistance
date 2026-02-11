@@ -1,34 +1,19 @@
 TITLE: Glioma Overview
-KEYWORDS: glioma, glioblastoma, astrocytoma, oligodendroglioma, brain tumor, WHO grade
+KEYWORDS: glioma, astrocytoma, oligodendroglioma, ependymoma, glial cells, brain tumor, neoplasm, intracranial
 VERSION: 1.0
 ---
 
-# Glioma Overview
+Definition:
+Gliomas are a category of brain tumors that originate from glial cells, the supportive cells of the central nervous system. They are the most common type of primary brain tumor. The main glial cell types from which gliomas arise include astrocytes (star-shaped cells that support neurons, producing astrocytomas), oligodendrocytes (myelin-producing cells, producing oligodendrogliomas), and ependymal cells (cells lining the ventricles, producing ependymomas). On MRI, gliomas present with variable features: some appear as non-enhancing lesions that are hyperintense on T2 and FLAIR with minimal mass effect, while others show contrast enhancement, central necrosis, significant peritumoral edema, and mass effect including potential midline shift.
 
-Gliomas are a category of brain tumors that originate from glial cells — the supportive cells of the central nervous system. They are the most common type of primary brain tumor, accounting for approximately 30% of all brain and central nervous system tumors.
+Why It Appears in the Report:
+This automated brain MRI analysis system segments and analyzes gliomas according to the BraTS (Brain Tumor Segmentation) challenge framework. The segmentation model identifies three key sub-regions: enhancing tumor, non-enhancing tumor core, and peritumoral edema.
 
-## Types of Glial Cells
+Typical Reporting Units:
+Not applicable. Glioma is a descriptive category; sub-region volumes are reported individually in cubic centimeters (cm³).
 
-- **Astrocytes**: Star-shaped cells that support neurons. Tumors arising from astrocytes are called astrocytomas.
-- **Oligodendrocytes**: Cells that produce myelin, the insulating sheath around nerve fibers. Tumors from these cells are called oligodendrogliomas.
-- **Ependymal cells**: Cells lining the ventricles. Tumors from these cells are called ependymomas.
+What This Does NOT Mean:
+This finding alone does not determine tumor type, grade, prognosis, or required treatment.
 
-## WHO Grading System
-
-The World Health Organization (WHO) classifies gliomas by grade based on their microscopic appearance and molecular markers:
-
-- **Grade 1**: Pilocytic astrocytoma — slow-growing, often well-circumscribed.
-- **Grade 2**: Diffuse low-grade glioma — infiltrative but slow-growing.
-- **Grade 3**: Anaplastic glioma — more aggressive, with increased cellularity and mitotic activity.
-- **Grade 4**: Glioblastoma (GBM) — the most aggressive type, characterized by necrosis, microvascular proliferation, and rapid growth.
-
-## MRI Characteristics
-
-On MRI, gliomas present with variable features depending on their grade:
-
-- **Low-grade gliomas**: Often appear as non-enhancing lesions on T1CE, hyperintense on T2/FLAIR, with minimal mass effect and no necrosis.
-- **High-grade gliomas**: Typically show contrast enhancement, central necrosis, significant peritumoral edema, and mass effect including potential midline shift.
-
-## Relevance to This Project
-
-This automated brain MRI analysis system is designed to segment and analyze gliomas according to the BraTS (Brain Tumor Segmentation) challenge framework. The segmentation model identifies three key sub-regions: enhancing tumor, non-enhancing tumor core, and peritumoral edema.
+Source Authority:
+Adapted from standard neuroradiology references and simplified for educational use.

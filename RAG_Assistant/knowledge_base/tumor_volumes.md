@@ -1,36 +1,19 @@
 TITLE: Tumor Volume Measurement
-KEYWORDS: volume, measurement, cubic centimeters, segmentation, voxel, BraTS
+KEYWORDS: volume, measurement, cubic centimeters, segmentation, voxel, BraTS, quantitative, volumetric
 VERSION: 1.0
 ---
 
-# Tumor Volume Measurement
+Definition:
+Tumor volume measurement is a quantitative assessment performed on brain MRI scans to determine the size of different tumor sub-regions. In automated brain tumor analysis, volumes are calculated from segmentation masks produced by deep learning models. A trained neural network (such as nnU-Net) assigns a label to each voxel (3D pixel) in the MRI scan, classifying it as enhancing tumor, non-enhancing tumor, peritumoral edema, or normal tissue. The number of voxels assigned to each label is counted and multiplied by the volume of a single voxel (determined by the scan's spatial resolution, typically 1 mm x 1 mm x 1 mm = 1 mm³), then converted to cubic centimeters where 1 cm³ = 1000 mm³. Standard volumetric measurements include enhancing tumor (ET), non-enhancing tumor core (NCET), peritumoral edema (ED), and whole tumor (WT), which is the sum of all three components.
 
-Tumor volume measurement is a quantitative assessment performed on brain MRI scans to determine the size of different tumor sub-regions. In automated brain tumor analysis, volumes are calculated from segmentation masks produced by deep learning models.
+Why It Appears in the Report:
+Volume measurements from the BraTS segmentation framework provide objective, reproducible quantification of each tumor sub-region. These values characterize lesion extent and enable standardized comparison across scans.
 
-## How Volume Is Calculated
+Typical Reporting Units:
+Cubic centimeters (cm³).
 
-1. **Segmentation**: A trained neural network (e.g., nnU-Net) assigns a label to each voxel (3D pixel) in the MRI scan, classifying it as enhancing tumor, non-enhancing tumor, peritumoral edema, or normal tissue.
-2. **Voxel counting**: The number of voxels assigned to each label is counted.
-3. **Volume conversion**: The voxel count is multiplied by the volume of a single voxel (determined by the MRI scan's spatial resolution, typically 1mm × 1mm × 1mm = 1 mm³).
-4. **Unit conversion**: The result is converted to cubic centimeters (cm³), where 1 cm³ = 1000 mm³.
+What This Does NOT Mean:
+This finding alone does not determine tumor type, grade, prognosis, or required treatment.
 
-## Reported Volumes in Brain Tumor Analysis
-
-Typical volumetric measurements include:
-
-- **Enhancing Tumor (ET)**: Volume of the contrast-enhancing tumor component.
-- **Non-Enhancing Tumor Core (NCET)**: Volume of the non-enhancing solid tumor and necrotic regions.
-- **Peritumoral Edema (ED)**: Volume of the surrounding edema/invaded tissue.
-- **Whole Tumor (WT)**: Sum of all three components (ET + NCET + ED), representing the total lesion volume.
-
-## Clinical Significance
-
-- **Baseline assessment**: Initial tumor volumes provide a reference for monitoring disease progression.
-- **Treatment response**: Volume changes over serial MRI scans can indicate whether a tumor is growing, stable, or responding to intervention.
-- **Research**: Volumetric data from standardized segmentation frameworks (like BraTS) enable comparison across studies and institutions.
-
-## Limitations
-
-- Volume measurements depend on the accuracy of the segmentation model.
-- Partial volume effects at tumor boundaries can introduce small measurement errors.
-- Different segmentation approaches may produce slightly different volume estimates for the same scan.
+Source Authority:
+Adapted from standard neuroradiology references and simplified for educational use.

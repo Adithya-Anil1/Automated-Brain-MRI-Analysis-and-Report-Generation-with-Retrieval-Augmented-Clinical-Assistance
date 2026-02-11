@@ -1,35 +1,19 @@
 TITLE: Peritumoral Edema
-KEYWORDS: edema, swelling, FLAIR, T2, vasogenic, peritumoral, white matter
+KEYWORDS: edema, swelling, FLAIR, T2, vasogenic, peritumoral, white matter, extracellular
 VERSION: 1.0
 ---
 
-# Peritumoral Edema
+Definition:
+Peritumoral edema is the accumulation of excess fluid in the brain tissue surrounding a tumor and is one of the most common findings associated with brain tumors. In the context of brain tumors, it is almost always vasogenic in nature, resulting from disruption of the blood-brain barrier that allows plasma proteins and fluid to leak into the extracellular space of the white matter. On T2-weighted sequences, peritumoral edema appears as a region of high signal intensity surrounding the tumor. On FLAIR sequences, it also appears hyperintense and is particularly conspicuous because the CSF signal is suppressed. On T1-weighted sequences, the edema appears as low signal intensity relative to normal brain parenchyma, and on post-contrast T1, the edema itself does not enhance, helping distinguish it from the enhancing tumor core.
 
-Peritumoral edema is the accumulation of excess fluid in the brain tissue surrounding a tumor. It is one of the most common findings associated with brain tumors and contributes significantly to the overall mass effect observed on imaging.
+Why It Appears in the Report:
+In the BraTS segmentation framework, peritumoral edema is labeled and measured as a distinct sub-region separate from enhancing and non-enhancing tumor components. Its volume contributes to the overall assessment of lesion extent and mass effect.
 
-## Types of Cerebral Edema
+Typical Reporting Units:
+Cubic centimeters (cm³), derived from voxel-level segmentation.
 
-- **Vasogenic edema**: The most common type surrounding brain tumors. It results from disruption of the blood-brain barrier (BBB), allowing plasma proteins and fluid to leak into the extracellular space of the white matter.
-- **Cytotoxic edema**: Involves intracellular swelling due to cellular injury. This type is more commonly associated with ischemic stroke than with tumors.
+What This Does NOT Mean:
+This finding alone does not determine tumor type, grade, prognosis, or required treatment.
 
-Peritumoral edema in the context of brain tumors is almost always vasogenic in nature.
-
-## MRI Appearance
-
-- **T2-weighted sequences**: Peritumoral edema appears as a region of high signal intensity (bright) surrounding the tumor.
-- **FLAIR sequences**: Also appears hyperintense; FLAIR is particularly useful because it suppresses the CSF signal, making the edema more conspicuous.
-- **T1-weighted sequences**: Edema appears as low signal intensity (dark) relative to normal brain parenchyma.
-- **Post-contrast T1**: The edema itself does not enhance, helping distinguish it from the enhancing tumor core.
-
-## Clinical Significance
-
-Peritumoral edema contributes to:
-
-- Increased intracranial pressure
-- Neurological symptoms such as headache, nausea, and focal deficits
-- Overall lesion volume and mass effect
-- Midline shift when extensive
-
-## Volume Measurement
-
-In brain tumor segmentation (e.g., BraTS challenge), peritumoral edema is labeled separately from enhancing and non-enhancing tumor components. Its volume is reported in cubic centimeters (cm³) and is an important metric in assessing overall tumor burden.
+Source Authority:
+Adapted from standard neuroradiology references and simplified for educational use.
