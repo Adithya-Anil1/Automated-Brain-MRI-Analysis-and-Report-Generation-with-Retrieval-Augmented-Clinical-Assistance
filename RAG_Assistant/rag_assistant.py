@@ -17,7 +17,7 @@ Safety constraints
 
 Usage
 -----
-    from RAG.rag_assistant import answer_query
+    from RAG_Assistant.rag_assistant import answer_query
 
     response = answer_query(
         user_query="What does midline shift mean in my report?",
@@ -257,20 +257,23 @@ def is_clinical_query(user_query: str) -> bool:
 # ============================================================================
 
 PROMPT_TEMPLATE = """\
-You are an educational assistant for MRI reports.
+You are an Educational MRI Assistant.
 
-### CONTEXT 1: PATIENT REPORT (FACT)
+Answer using ONLY the provided context.
+
+### CONTEXT 1: PATIENT REPORT
 {patient_report}
 
-### CONTEXT 2: VERIFIED MEDICAL DEFINITIONS (GENERAL INFORMATION)
+### CONTEXT 2: KNOWLEDGE BASE
 {definitions}
 
 ### RULES
-- Use ONLY the information provided above.
-- Do NOT use external medical knowledge.
-- Do NOT provide diagnosis, prognosis, or treatment advice.
-- If the answer is not explicitly supported by the context, respond with:
-  "This information is not present in the generated report or verified definitions."
+1. Answer in maximum 3 sentences.
+2. Direct style: Do not use phrases like "Based on the context".
+3. Combine the definition (Context 2) with the patient's data (Context 1).
+4. Safety: If the user asks for diagnosis or treatment, REFUSE.
+5. If the information is not present in the context, say:
+   "This information is not present in the generated report or verified definitions."
 
 ### USER QUESTION
 {user_query}
@@ -349,7 +352,7 @@ def call_gemini(prompt: str) -> str:
     model = genai.GenerativeModel(model_name="gemini-3-flash-preview")
     generation_config = genai.types.GenerationConfig(
         temperature=0.1,       # Low temperature — factual, deterministic
-        max_output_tokens=512, # Short, concise answers
+        max_output_tokens=300, # Enough for 3-4 concise sentences
     )
 
     try:

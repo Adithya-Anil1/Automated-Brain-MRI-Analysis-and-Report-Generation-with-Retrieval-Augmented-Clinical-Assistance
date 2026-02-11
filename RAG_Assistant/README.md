@@ -39,7 +39,7 @@ User Question
 ## Quick Start
 
 ```python
-from RAG.rag_assistant import answer_query
+from RAG_Assistant.rag_assistant import answer_query
 
 report = "..."  # Full MRI report text
 answer = answer_query("What does midline shift mean?", report)
