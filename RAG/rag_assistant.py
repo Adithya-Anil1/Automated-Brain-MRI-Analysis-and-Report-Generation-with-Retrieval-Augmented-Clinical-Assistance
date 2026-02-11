@@ -1,0 +1,479 @@
+"""
+RAG-Based Educational Assistant for Brain MRI Reports
+======================================================
+A controlled retrieval-augmented generation (RAG) module that answers
+questions about a patient's MRI report using ONLY:
+
+    Source A — the generated patient MRI report  (injected as context)
+    Source B — a small verified medical-definitions knowledge base
+               (retrieved from an in-memory vector store)
+
+Safety constraints
+------------------
+* Keyword-based question gating blocks clinical queries BEFORE the LLM.
+* The prompt explicitly forbids diagnosis, prognosis, or treatment advice.
+* If the answer cannot be grounded in the provided context the LLM is
+  instructed to return a standard refusal string.
+
+Usage
+-----
+    from RAG.rag_assistant import answer_query
+
+    response = answer_query(
+        user_query="What does midline shift mean in my report?",
+        patient_report_text="<full report text>"
+    )
+    print(response)
+"""
+
+import os
+import warnings
+import numpy as np
+from typing import List, Tuple
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file from project root
+except ImportError:
+    pass  # python-dotenv not installed, will use os.environ directly
+
+# ============================================================================
+# 1.  REFUSAL TEMPLATES  (hard-coded safety strings)
+# ============================================================================
+# These are returned verbatim without ever calling the LLM.
+
+REFUSAL_CLINICAL = (
+    "I cannot answer clinical questions regarding diagnosis, prognosis, "
+    "or treatment. Please consult a doctor."
+)
+
+REFUSAL_DATA = (
+    "This information is not present in the generated report "
+    "or verified definitions."
+)
+
+# ============================================================================
+# 2.  BLOCKED KEYWORDS  (used by the question-gating step)
+# ============================================================================
+# Any query containing one of these words (case-insensitive) is immediately
+# refused — the LLM is never invoked.
+
+BLOCKED_KEYWORDS = [
+    "treatment", "therapy", "surgery", "medication", "drug",
+    "prognosis", "survival", "outcome", "chemotherapy", "radiation",
+]
+
+# ============================================================================
+# 3.  GEMINI CONFIGURATION
+# ============================================================================
+# The API key is read from the environment.  Set it via:
+#   export GEMINI_API_KEY=your_key_here        (Linux / macOS)
+#   set    GEMINI_API_KEY=your_key_here        (Windows CMD)
+#   $env:GEMINI_API_KEY = "your_key_here"      (PowerShell)
+#
+# or place it in a .env file at the project root.
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+GEMINI_AVAILABLE = False
+try:
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        import google.generativeai as genai  # type: ignore
+    GEMINI_AVAILABLE = True
+except ImportError:
+    genai = None  # Gemini SDK not installed
+
+
+# ============================================================================
+# 4.  DUMMY VECTOR STORE  (in-memory, no external files)
+# ============================================================================
+# A minimal vector store built on NumPy for the college-project demo.
+# Each "document" is a short, verified medical definition with NO treatment
+# or prognosis language.
+
+# --- Verified medical definitions (Source B) --------------------------------
+
+MEDICAL_DEFINITIONS: List[dict] = [
+    {
+        "term": "Midline shift",
+        "text": (
+            "Midline shift refers to the displacement of brain structures "
+            "from their normal central position to one side. It is measured "
+            "in millimeters on axial MRI or CT images and indicates "
+            "asymmetric mass effect within the cranial cavity."
+        ),
+    },
+    {
+        "term": "Peritumoral edema",
+        "text": (
+            "Peritumoral edema is the accumulation of excess fluid in the "
+            "brain tissue surrounding a tumor. On T2-weighted and FLAIR MRI "
+            "sequences it appears as a region of high signal intensity "
+            "around the tumor margin."
+        ),
+    },
+    {
+        "term": "Enhancing tumor",
+        "text": (
+            "An enhancing tumor is a region that shows increased signal "
+            "intensity on post-contrast T1-weighted MRI images after "
+            "gadolinium administration. Enhancement indicates areas where "
+            "the blood-brain barrier is disrupted, allowing contrast agent "
+            "to accumulate."
+        ),
+    },
+]
+
+
+class DummyVectorStore:
+    """
+    Minimal in-memory vector store using TF-IDF-style bag-of-words
+    embeddings and cosine similarity.
+
+    This avoids any dependency on heavyweight libraries (FAISS,
+    sentence-transformers, etc.) so the demo runs immediately.
+    """
+
+    def __init__(self, documents: List[dict] | None = None):
+        """
+        Parameters
+        ----------
+        documents : list[dict]
+            Each dict must have a ``"text"`` key and optionally a ``"term"`` key.
+        """
+        self.documents: List[dict] = documents or []
+        self.vocab: List[str] = []
+        self.vectors: np.ndarray = np.array([])
+        if self.documents:
+            self._build_index()
+
+    # --- internal helpers ---------------------------------------------------
+
+    @staticmethod
+    def _tokenize(text: str) -> List[str]:
+        """Lowercase and split on non-alpha characters."""
+        import re
+        return re.findall(r"[a-z]+", text.lower())
+
+    def _build_index(self) -> None:
+        """Build a simple bag-of-words vector for every document."""
+        # 1. Collect vocabulary from all documents
+        all_tokens: List[List[str]] = []
+        vocab_set: set = set()
+        for doc in self.documents:
+            tokens = self._tokenize(doc["text"])
+            all_tokens.append(tokens)
+            vocab_set.update(tokens)
+        self.vocab = sorted(vocab_set)
+        word_to_idx = {w: i for i, w in enumerate(self.vocab)}
+
+        # 2. Vectorize each document (term-frequency)
+        matrix = np.zeros((len(self.documents), len(self.vocab)))
+        for row, tokens in enumerate(all_tokens):
+            for tok in tokens:
+                matrix[row, word_to_idx[tok]] += 1
+        # L2-normalise for cosine similarity
+        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+        norms[norms == 0] = 1  # avoid division by zero
+        self.vectors = matrix / norms
+
+    def _query_vector(self, query: str) -> np.ndarray:
+        """Convert a query string into the same vector space."""
+        vec = np.zeros(len(self.vocab))
+        word_to_idx = {w: i for i, w in enumerate(self.vocab)}
+        for tok in self._tokenize(query):
+            if tok in word_to_idx:
+                vec[word_to_idx[tok]] += 1
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        return vec
+
+    # --- public API ---------------------------------------------------------
+
+    def retrieve(self, query: str, top_k: int = 2) -> List[Tuple[dict, float]]:
+        """
+        Retrieve the *top_k* most relevant documents for *query*.
+
+        Returns
+        -------
+        list[(document_dict, similarity_score)]
+        """
+        if not self.documents:
+            return []
+        q_vec = self._query_vector(query)
+        # Cosine similarity = dot product (vectors are already L2-normalised)
+        scores = self.vectors @ q_vec
+        top_indices = np.argsort(scores)[::-1][:top_k]
+        return [(self.documents[i], float(scores[i])) for i in top_indices]
+
+
+def init_vector_store() -> DummyVectorStore:
+    """
+    Initialize the dummy in-memory vector store with verified
+    medical definitions.  No external files are required.
+
+    Returns
+    -------
+    DummyVectorStore
+        Ready-to-query vector store containing 3 safe definitions.
+    """
+    return DummyVectorStore(documents=MEDICAL_DEFINITIONS)
+
+
+# ============================================================================
+# 5.  QUESTION GATING  (keyword-based safety filter)
+# ============================================================================
+
+def is_clinical_query(user_query: str) -> bool:
+    """
+    Check whether *user_query* contains any blocked clinical keyword.
+
+    This runs **before** the LLM is called.  If it returns True the
+    caller must return ``REFUSAL_CLINICAL`` immediately.
+
+    Parameters
+    ----------
+    user_query : str
+        The raw question from the user.
+
+    Returns
+    -------
+    bool
+        True if the query matches a blocked keyword.
+    """
+    query_lower = user_query.lower()
+    for keyword in BLOCKED_KEYWORDS:
+        if keyword in query_lower:
+            return True
+    return False
+
+
+# ============================================================================
+# 6.  PROMPT CONSTRUCTION  (strict template)
+# ============================================================================
+
+PROMPT_TEMPLATE = """\
+You are an educational assistant for MRI reports.
+
+### CONTEXT 1: PATIENT REPORT (FACT)
+{patient_report}
+
+### CONTEXT 2: VERIFIED MEDICAL DEFINITIONS (GENERAL INFORMATION)
+{definitions}
+
+### RULES
+- Use ONLY the information provided above.
+- Do NOT use external medical knowledge.
+- Do NOT provide diagnosis, prognosis, or treatment advice.
+- If the answer is not explicitly supported by the context, respond with:
+  "This information is not present in the generated report or verified definitions."
+
+### USER QUESTION
+{user_query}
+"""
+
+
+def build_prompt(
+    user_query: str,
+    patient_report: str,
+    retrieved_definitions: List[Tuple[dict, float]],
+) -> str:
+    """
+    Assemble the strict RAG prompt from the patient report and the
+    retrieved medical definitions.
+
+    Parameters
+    ----------
+    user_query : str
+        The user's question.
+    patient_report : str
+        Full text of the patient's generated MRI report.
+    retrieved_definitions : list
+        Output of ``DummyVectorStore.retrieve()``  —  list of
+        (document_dict, score) tuples.
+
+    Returns
+    -------
+    str
+        The complete prompt string ready for the LLM.
+    """
+    # Format retrieved definitions into a readable block
+    def_lines: List[str] = []
+    for doc, score in retrieved_definitions:
+        term = doc.get("term", "Definition")
+        text = doc["text"]
+        def_lines.append(f"- **{term}**: {text}")
+    definitions_block = "\n".join(def_lines) if def_lines else "No definitions retrieved."
+
+    prompt = PROMPT_TEMPLATE.format(
+        patient_report=patient_report.strip(),
+        definitions=definitions_block,
+        user_query=user_query.strip(),
+    )
+    return prompt
+
+
+# ============================================================================
+# 7.  GEMINI LLM CALL
+# ============================================================================
+
+def call_gemini(prompt: str) -> str:
+    """
+    Send *prompt* to Gemini 1.5 Flash with low temperature and return
+    the response text.
+
+    Parameters
+    ----------
+    prompt : str
+        The fully assembled RAG prompt.
+
+    Returns
+    -------
+    str
+        The model's response text, or ``REFUSAL_DATA`` on failure.
+    """
+    if not GEMINI_AVAILABLE:
+        return "[Error] google-generativeai SDK is not installed."
+
+    if not GEMINI_API_KEY:
+        return "[Error] GEMINI_API_KEY environment variable is not set."
+
+    # Configure the SDK with the API key
+    genai.configure(api_key=GEMINI_API_KEY)
+
+    # Use gemini-3-flash-preview with low temperature for factual responses
+    model = genai.GenerativeModel(model_name="gemini-3-flash-preview")
+    generation_config = genai.types.GenerationConfig(
+        temperature=0.1,       # Low temperature — factual, deterministic
+        max_output_tokens=512, # Short, concise answers
+    )
+
+    try:
+        response = model.generate_content(
+            prompt,
+            generation_config=generation_config,
+        )
+        return response.text.strip()
+    except Exception as e:
+        print(f"[RAG] Gemini API error: {e}")
+        return REFUSAL_DATA
+
+
+# ============================================================================
+# 8.  MAIN ENTRY POINT — answer_query()
+# ============================================================================
+
+def answer_query(user_query: str, patient_report_text: str) -> str:
+    """
+    Answer a user question about a patient MRI report using a
+    controlled RAG pipeline with strict safety constraints.
+
+    Pipeline steps
+    --------------
+    1. **Keyword gating** — block clinical queries before LLM call.
+    2. **Retrieve** top-2 definitions from the in-memory vector store.
+    3. **Build prompt** — inject the patient report and definitions.
+    4. **Call Gemini** — get a short, factual, explanatory answer.
+    5. **Return** the response (or a safe fallback).
+
+    Parameters
+    ----------
+    user_query : str
+        The user's natural-language question.
+    patient_report_text : str
+        Full text of the generated patient MRI report.
+
+    Returns
+    -------
+    str
+        The assistant's answer, or a refusal string.
+    """
+
+    # ------------------------------------------------------------------
+    # Step 1: SAFETY GATING — check for blocked clinical keywords
+    # ------------------------------------------------------------------
+    # This happens BEFORE any LLM call.  If the query is clinical, we
+    # return the hard-coded refusal immediately.
+    if is_clinical_query(user_query):
+        return REFUSAL_CLINICAL
+
+    # ------------------------------------------------------------------
+    # Step 2: RETRIEVE relevant medical definitions (Source B)
+    # ------------------------------------------------------------------
+    # Initialise the dummy vector store with our verified definitions
+    vector_store = init_vector_store()
+
+    # Retrieve the top-2 most relevant definitions for the query
+    retrieved = vector_store.retrieve(query=user_query, top_k=2)
+
+    # ------------------------------------------------------------------
+    # Step 3: BUILD PROMPT with both data sources
+    # ------------------------------------------------------------------
+    prompt = build_prompt(
+        user_query=user_query,
+        patient_report=patient_report_text,
+        retrieved_definitions=retrieved,
+    )
+
+    # ------------------------------------------------------------------
+    # Step 4: CALL GEMINI (gemini-1.5-flash, low temperature)
+    # ------------------------------------------------------------------
+    response = call_gemini(prompt)
+
+    # ------------------------------------------------------------------
+    # Step 5: RETURN the response (safe fallback on empty)
+    # ------------------------------------------------------------------
+    if not response or not response.strip():
+        return REFUSAL_DATA
+
+    return response
+
+
+# ============================================================================
+# 9.  STANDALONE TEST / DEMO
+# ============================================================================
+# Run this file directly to see the pipeline in action with a sample report.
+
+if __name__ == "__main__":
+
+    # --- Sample patient report (for demo purposes) ----------------------
+    SAMPLE_REPORT = """\
+FINDINGS:
+A heterogeneously enhancing mass is identified in the right temporal lobe,
+measuring approximately 45 x 38 x 42 mm.  The lesion demonstrates central
+necrosis with irregular peripheral enhancement on post-contrast T1-weighted
+images. Surrounding peritumoral edema extends into the adjacent white matter,
+appearing hyperintense on T2/FLAIR sequences. There is approximately 4 mm
+of midline shift from right to left. The ventricles are mildly compressed
+on the right side. No additional enhancing lesions are identified.
+
+VOLUMES:
+- Enhancing tumor:    12.4 cm³
+- Non-enhancing tumor: 8.7 cm³
+- Peritumoral edema:  34.2 cm³
+- Total lesion:       55.3 cm³
+"""
+
+    # --- Demo queries (safe + blocked) ----------------------------------
+    demo_queries = [
+        "What does midline shift mean in this report?",
+        "How large is the enhancing tumor?",
+        "What is peritumoral edema?",
+        "What treatment should I get for this tumor?",     # BLOCKED
+        "What is my prognosis?",                            # BLOCKED
+        "Where is the mass located?",
+    ]
+
+    print("=" * 70)
+    print("  RAG Educational Assistant — Demo")
+    print("=" * 70)
+
+    for q in demo_queries:
+        print(f"\n📌  Q: {q}")
+        ans = answer_query(user_query=q, patient_report_text=SAMPLE_REPORT)
+        print(f"💬  A: {ans}")
+        print("-" * 70)
