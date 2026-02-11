@@ -7,7 +7,7 @@ VERSION: 1.0
 
 An enhancing tumor is a region that shows increased signal intensity on post-contrast T1-weighted MRI images after intravenous administration of a gadolinium-based contrast agent. Enhancement indicates areas where the blood-brain barrier (BBB) is disrupted, allowing the contrast agent to leak from blood vessels into the surrounding tissue.
 
-## Mechanism of Enhancement
+## Mechanism of Enhancementa
 
 The blood-brain barrier normally prevents large molecules from crossing into brain tissue. In regions of active tumor growth, the BBB is disrupted due to:
 
