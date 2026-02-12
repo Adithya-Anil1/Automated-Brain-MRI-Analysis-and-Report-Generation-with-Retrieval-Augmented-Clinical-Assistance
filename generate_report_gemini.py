@@ -158,7 +158,7 @@ def refine_with_llm(report: str, api_key: str) -> str:
     
     # Create the model
     model = genai.GenerativeModel(
-        model_name="gemini-3-flash-preview",
+        model_name="gemini-2.0-flash-exp",
         system_instruction=LLM_REFINEMENT_PROMPT
     )
     

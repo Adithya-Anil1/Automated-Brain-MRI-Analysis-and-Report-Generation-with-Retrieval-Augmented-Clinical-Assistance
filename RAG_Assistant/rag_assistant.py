@@ -359,8 +359,8 @@ def call_gemini(prompt: str) -> str:
     # Configure the SDK with the API key
     genai.configure(api_key=GEMINI_API_KEY)
 
-    # Use gemini-3-flash-preview with low temperature for factual responses
-    model = genai.GenerativeModel(model_name="gemini-3-flash-preview")
+    # Use gemini-2.0-flash-exp with low temperature for factual responses
+    model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
     generation_config = genai.types.GenerationConfig(
         temperature=0.1,       # Low temperature — factual, deterministic
         max_output_tokens=1024, # Enough for 3-4 complete sentences
