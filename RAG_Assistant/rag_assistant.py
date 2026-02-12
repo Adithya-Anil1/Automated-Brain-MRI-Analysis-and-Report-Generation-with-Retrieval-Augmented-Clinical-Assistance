@@ -359,14 +359,16 @@ def call_gemini(prompt: str) -> str:
     if not GEMINI_AVAILABLE:
         return "[Error] google-generativeai SDK is not installed."
 
-    if not GEMINI_API_KEY:
+    # Always re-read the API key from environment (in case .env was updated)
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
         return "[Error] GEMINI_API_KEY environment variable is not set."
 
     # Configure the SDK with the API key
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=api_key)
 
-    # Use gemini-2.0-flash with low temperature for factual responses
-    model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+    # Use gemini-2.5-flash with low temperature for factual responses
+    model = genai.GenerativeModel(model_name="gemini-2.5-flash")
     generation_config = genai.types.GenerationConfig(
         temperature=0.1,       # Low temperature — factual, deterministic
         max_output_tokens=1024, # Enough for 3-4 complete sentences
@@ -450,7 +452,7 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
     )
 
     # ------------------------------------------------------------------
-    # Step 4: CALL GEMINI (gemini-2.0-flash, low temperature)
+    # Step 4: CALL GEMINI (gemini-2.5-flash, low temperature)
     # ------------------------------------------------------------------
     response = call_gemini(prompt)
 
