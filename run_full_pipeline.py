@@ -10,6 +10,7 @@ This script automates the complete workflow:
 5. Run feature extraction pipeline
 6. Generate Gemini radiology report
 7. Generate professional PDF report
+8. Launch RAG Educational Assistant (interactive Q&A)
 
 Usage:
     python run_full_pipeline.py <case_folder>
@@ -387,6 +388,73 @@ def run_pdf_report(results_folder):
     return None
 
 
+def run_rag_assistant(report_path):
+    """
+    Launch the interactive RAG Educational Assistant.
+
+    The assistant answers questions using the patient's radiology report
+    and the verified medical-definitions knowledge base.
+
+    Parameters
+    ----------
+    report_path : Path
+        Path to the generated radiology_report.txt file.
+    """
+    report_path = Path(report_path)
+
+    if not report_path.exists():
+        print(f"  ⚠ Report not found at {report_path}")
+        print(f"    RAG assistant requires a generated radiology report.")
+        return
+
+    # Read the patient report
+    with open(report_path, "r", encoding="utf-8") as f:
+        patient_report = f.read()
+
+    if not patient_report.strip():
+        print(f"  ⚠ Report file is empty: {report_path}")
+        return
+
+    # Import the RAG module
+    try:
+        from RAG_Assistant.rag_assistant import answer_query
+    except ImportError as e:
+        print(f"  ⚠ Could not import RAG assistant: {e}")
+        print(f"    Make sure RAG_Assistant/ is in the project root.")
+        return
+
+    case_id = report_path.parent.parent.name  # results/<CaseID>/feature_extraction/
+
+    print(f"\n  📂 Report: {report_path.name}")
+    print(f"  🧠 Patient: {case_id}")
+    print(f"  💡 Ask questions about the patient's MRI findings.")
+    print(f"  🚫 Clinical questions (treatment, prognosis) are blocked.")
+    print(f"  ⌨  Type 'quit' or 'exit' to finish.")
+    print("=" * 70)
+
+    while True:
+        print()
+        try:
+            user_input = input("💬 Your question: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 RAG session ended.")
+            break
+
+        if not user_input:
+            continue
+
+        if user_input.lower() in ('quit', 'exit', 'q'):
+            print("\n👋 RAG session ended.")
+            break
+
+        answer = answer_query(
+            user_query=user_input,
+            patient_report_text=patient_report,
+        )
+        print(f"\n📚 Answer:\n{answer}")
+        print("-" * 70)
+
+
 def run_pipeline(case_folder):
     """
     Run the complete analysis pipeline on a case folder.
@@ -520,6 +588,19 @@ def run_pipeline(case_folder):
         print(f"\n  ⚠ Skipped (text report required first)")
     
     # =========================================================================
+    # STEP 8: RAG Educational Assistant (interactive Q&A)
+    # =========================================================================
+    print_step(8, "RAG EDUCATIONAL ASSISTANT")
+
+    report_path = results_folder / "feature_extraction" / "radiology_report.txt"
+    if report_path.exists():
+        print(f"\n  ✅ Report available — launching interactive RAG assistant")
+        print_header("RAG EDUCATIONAL ASSISTANT — Interactive Q&A")
+        run_rag_assistant(report_path)
+    else:
+        print(f"\n  ⚠ Skipped — no radiology report available for RAG")
+
+    # =========================================================================
     # SUMMARY
     # =========================================================================
     pipeline_elapsed = time.time() - pipeline_start
@@ -590,6 +671,7 @@ Pipeline Steps:
   5. Run 6-step feature extraction pipeline
   6. Generate radiology report (requires API key)
   7. Generate professional PDF report
+  8. Launch RAG Educational Assistant (interactive Q&A)
 
 Output:
   results/<CaseID>/

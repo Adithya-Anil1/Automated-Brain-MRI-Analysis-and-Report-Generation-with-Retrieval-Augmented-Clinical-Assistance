@@ -275,6 +275,12 @@ Answer using ONLY the provided context.
 5. If the information is not present in the context, say:
    "This information is not present in the generated report or verified definitions."
 
+### FORMATTING RULE (Clinical Style — Mandatory)
+- Begin the answer with a short clinical summary sentence.
+- If three or more quantitative sub-values are listed (e.g., tumor components), present those sub-values as a bulleted list under a short descriptive heading.
+- Do NOT present multiple measurements as one continuous paragraph.
+- Maintain a professional radiology tone — concise, structured, and clinically focused.
+
 ### USER QUESTION
 {user_query}
 """
@@ -359,8 +365,8 @@ def call_gemini(prompt: str) -> str:
     # Configure the SDK with the API key
     genai.configure(api_key=GEMINI_API_KEY)
 
-    # Use gemini-2.0-flash-exp with low temperature for factual responses
-    model = genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
+    # Use gemini-2.0-flash with low temperature for factual responses
+    model = genai.GenerativeModel(model_name="gemini-2.0-flash")
     generation_config = genai.types.GenerationConfig(
         temperature=0.1,       # Low temperature — factual, deterministic
         max_output_tokens=1024, # Enough for 3-4 complete sentences
@@ -444,7 +450,7 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
     )
 
     # ------------------------------------------------------------------
-    # Step 4: CALL GEMINI (gemini-3-flash-preview, low temperature)
+    # Step 4: CALL GEMINI (gemini-2.0-flash, low temperature)
     # ------------------------------------------------------------------
     response = call_gemini(prompt)
 
@@ -460,57 +466,94 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
 # ============================================================================
 # 9.  STANDALONE TEST / DEMO
 # ============================================================================
-# Run this file directly to see the pipeline in action with a sample report.
+# Run this file directly to see the pipeline in action with a patient report.
+#
+# Usage:
+#   python -m RAG_Assistant.rag_assistant                          (default patient)
+#   python -m RAG_Assistant.rag_assistant <path/to/report.txt>     (custom report)
+#   python -m RAG_Assistant.rag_assistant results/BraTS-GLI-00020-000  (patient folder)
 
 if __name__ == "__main__":
 
-    # --- Sample patient report (for demo purposes) ----------------------
-    # --- Load a real patient report from results/ -----------------------
+    import sys
     import os
+
     _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     _PROJECT_DIR = os.path.dirname(_SCRIPT_DIR)
-    _REPORT_PATH = os.path.join(
-        _PROJECT_DIR, "results", "BraTS-GLI-00005-000",
-        "feature_extraction", "radiology_report.txt"
-    )
+
+    # --- Resolve report path from CLI argument or default ---------------
+    _REPORT_PATH = None
+
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        candidate = os.path.abspath(arg)
+
+        if os.path.isfile(candidate):
+            # Direct path to a .txt report file
+            _REPORT_PATH = candidate
+        elif os.path.isdir(candidate):
+            # Patient results folder — look inside feature_extraction/
+            _REPORT_PATH = os.path.join(candidate, "feature_extraction", "radiology_report.txt")
+            if not os.path.isfile(_REPORT_PATH):
+                print(f"  ⚠ No report found at {_REPORT_PATH}")
+                sys.exit(1)
+        else:
+            # Maybe it's a case ID like BraTS-GLI-00020-000
+            _REPORT_PATH = os.path.join(
+                _PROJECT_DIR, "results", arg,
+                "feature_extraction", "radiology_report.txt"
+            )
+            if not os.path.isfile(_REPORT_PATH):
+                print(f"  ⚠ Could not find report for: {arg}")
+                print(f"     Tried: {_REPORT_PATH}")
+                sys.exit(1)
+    else:
+        # Default patient
+        _REPORT_PATH = os.path.join(
+            _PROJECT_DIR, "results", "BraTS-GLI-00020-000",
+            "feature_extraction", "radiology_report.txt"
+        )
+
+    # --- Load the report ------------------------------------------------
     try:
         with open(_REPORT_PATH, "r", encoding="utf-8") as f:
             SAMPLE_REPORT = f.read()
-        print(f"  Loaded real report: {_REPORT_PATH}")
+        print(f"  Loaded report: {_REPORT_PATH}")
     except FileNotFoundError:
-        print(f"  ⚠ Report not found at {_REPORT_PATH}, using fallback.")
-        SAMPLE_REPORT = "(No patient report available.)"
+        print(f"  ⚠ Report not found at {_REPORT_PATH}")
+        sys.exit(1)
 
-    # --- Demo queries (safe + blocked) ----------------------------------
-    demo_queries = [
-        "What does midline shift mean in this report?",
-        "How large is the enhancing tumor?",
-        "What is peritumoral edema?",
-        "What treatment should I get for this tumor?",     # BLOCKED
-        "What is my prognosis?",                            # BLOCKED
-        "Where is the mass located?",
-    ]
+    # --- Extract case ID from path for display --------------------------
+    _parts = os.path.normpath(_REPORT_PATH).split(os.sep)
+    _case_id = "Unknown"
+    for i, p in enumerate(_parts):
+        if p == "feature_extraction" and i > 0:
+            _case_id = _parts[i - 1]
+            break
 
+    # --- Interactive loop -----------------------------------------------
     print("=" * 70)
     print("  RAG Educational Assistant — Interactive Mode")
     print("=" * 70)
-    print(f"\n  Report: BraTS-GLI-00005-000")
-    print(f"  Volumes: WT=118.4 cm³, ET=24.1 cm³, ED=69.9 cm³")
-    print(f"\n  Type 'quit' or 'exit' to stop")
+    print(f"\n  Patient: {_case_id}")
+    print(f"  Report:  {os.path.basename(_REPORT_PATH)}")
+    print(f"\n  💡 Ask questions about the patient's MRI findings.")
+    print(f"  🚫 Clinical questions (treatment, prognosis) are blocked.")
+    print(f"  ⌨  Type 'quit' or 'exit' to stop")
     print("=" * 70)
 
     import time
     while True:
         print("\n" + "-" * 70)
         user_input = input("\n💬 Your question: ").strip()
-        
+
         if not user_input:
             continue
-        
+
         if user_input.lower() in ['quit', 'exit', 'q']:
             print("\n👋 Done!")
             break
-        
+
         ans = answer_query(user_query=user_input, patient_report_text=SAMPLE_REPORT)
         print(f"\n📚 Answer:\n{ans}")
         print("-" * 70)
