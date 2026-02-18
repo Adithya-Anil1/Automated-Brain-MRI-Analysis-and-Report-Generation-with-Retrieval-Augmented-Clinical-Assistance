@@ -147,10 +147,53 @@ def _parse_log(log_path: Path) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _find_case_folder(input_dir: Path) -> Path:
+    """
+    After extracting a zip into input_dir, locate the actual BraTS case folder.
+
+    Three layouts are handled:
+      1. Zip contained a single subfolder  → use that subfolder
+      2. Zip files were placed directly     → use input_dir itself
+      3. Multiple subfolders               → use the first one that contains NIfTI files
+    """
+    # Direct NIfTI files in input_dir?
+    if list(input_dir.glob("*.nii.gz")) or list(input_dir.glob("*.nii")):
+        return input_dir
+
+    subdirs = [d for d in sorted(input_dir.iterdir()) if d.is_dir()]
+    if not subdirs:
+        return input_dir
+
+    if len(subdirs) == 1:
+        return subdirs[0]
+
+    # Multiple subdirs – prefer the first one that has NIfTI files
+    for d in subdirs:
+        if list(d.glob("*.nii.gz")) or list(d.glob("*.nii")):
+            return d
+
+    return subdirs[0]  # last-resort fallback
+
+
+def get_output_dir(job_id: str) -> Path:
+    """
+    Return the feature-extraction output directory for this job:
+        <project_root>/results/<case_id>/feature_extraction
+    All pipeline output files (report, PDF, JSON) live here.
+    """
+    with JOB_LOCK:
+        case_id = JOB_STORE.get(job_id, {}).get("case_id", "")
+    return BASE_DIR / "results" / case_id / "feature_extraction"
+
+
+# ---------------------------------------------------------------------------
 # Background pipeline runner
 # ---------------------------------------------------------------------------
 
-def _run_pipeline(job_id: str, input_dir: Path, log_path: Path):
+def _run_pipeline(job_id: str, case_folder: Path, log_path: Path):
     """Execute run_full_pipeline.py in a subprocess; update JOB_STORE on exit."""
     try:
         with open(log_path, "w", encoding="utf-8") as log_fh:
@@ -158,8 +201,7 @@ def _run_pipeline(job_id: str, input_dir: Path, log_path: Path):
                 [
                     sys.executable,
                     str(BASE_DIR / "run_full_pipeline.py"),
-                    "--input",
-                    str(input_dir),
+                    str(case_folder),   # positional arg — matches main()'s 'case_folder'
                 ],
                 stdout=log_fh,
                 stderr=subprocess.STDOUT,
@@ -226,17 +268,22 @@ async def analyze(file: UploadFile = File(...)):
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid zip archive.")
 
-    # Register job
+    # Locate the actual BraTS case folder and derive case_id
+    case_folder = _find_case_folder(input_dir)
+    case_id = case_folder.name
+
+    # Register job (store case_id so result-path helpers work)
     with JOB_LOCK:
         JOB_STORE[job_id] = {
             "status": "running",
             "stage": "segmenting",
+            "case_id": case_id,
         }
 
     # Launch pipeline in a background thread
     t = threading.Thread(
         target=_run_pipeline,
-        args=(job_id, input_dir, log_path),
+        args=(job_id, case_folder, log_path),
         daemon=True,
     )
     t.start()
@@ -268,7 +315,8 @@ async def report_text(job_id: str):
         if job_id not in JOB_STORE:
             raise HTTPException(status_code=404, detail="Job not found.")
 
-    report_path = SESSIONS_DIR / job_id / "output" / "report.txt"
+    # Pipeline writes to  results/<case_id>/feature_extraction/radiology_report.txt
+    report_path = get_output_dir(job_id) / "radiology_report.txt"
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="Report not generated yet.")
 
@@ -286,7 +334,8 @@ async def report_pdf(job_id: str):
         if job_id not in JOB_STORE:
             raise HTTPException(status_code=404, detail="Job not found.")
 
-    pdf_path = SESSIONS_DIR / job_id / "output" / "report.pdf"
+    # Pipeline writes to  results/<case_id>/feature_extraction/radiology_report.pdf
+    pdf_path = get_output_dir(job_id) / "radiology_report.pdf"
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF report not generated yet.")
 
@@ -301,28 +350,44 @@ async def report_pdf(job_id: str):
 
 @app.get("/api/metrics/{job_id}")
 async def metrics(job_id: str):
-    """Return selected tumour metrics from features.json."""
+    """Return selected tumour metrics from the pipeline's llm_ready_summary.json."""
 
     with JOB_LOCK:
         if job_id not in JOB_STORE:
             raise HTTPException(status_code=404, detail="Job not found.")
 
-    features_path = SESSIONS_DIR / job_id / "output" / "features.json"
-    if not features_path.exists():
+    # Pipeline writes  results/<case_id>/feature_extraction/llm_ready_summary.json
+    summary_path = get_output_dir(job_id) / "llm_ready_summary.json"
+    if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Metrics not available yet.")
 
-    data = json.loads(features_path.read_text(encoding="utf-8"))
+    data = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    # --- map nested pipeline keys to flat API response ---
+    # tumor_characteristics
+    tc = data.get("tumor_characteristics", {})
+    # location
+    loc = data.get("location", {})
+    # mass_effect
+    me = data.get("mass_effect", {})
+    # quality_metrics
+    qm = data.get("quality_metrics", {})
 
     return {
-        "whole_tumor_volume_cm3": data.get("whole_tumor_volume_cm3", 0.0),
-        "enhancing_volume_cm3": data.get("enhancing_volume_cm3", 0.0),
-        "necrotic_volume_cm3": data.get("necrotic_volume_cm3", 0.0),
-        "edema_volume_cm3": data.get("edema_volume_cm3", 0.0),
-        "hemisphere": data.get("hemisphere", "unknown"),
-        "lobe": data.get("lobe", "unknown"),
-        "midline_shift_mm": data.get("midline_shift_mm", 0.0),
-        "dice_score": data.get("dice_score", None),
-        "segmentation_quality": data.get("segmentation_quality", "unknown"),
+        # 'volume_cm3' is Whole Tumor in the pipeline's llm_ready_summary
+        "whole_tumor_volume_cm3": float(tc.get("volume_cm3", 0.0)),
+        "enhancing_volume_cm3":   float(tc.get("enhancing_volume_cm3", 0.0)),
+        "necrotic_volume_cm3":    float(tc.get("necrotic_volume_cm3", 0.0)),
+        "edema_volume_cm3":       float(tc.get("edema_volume_cm3", 0.0)),
+        # location fields
+        "hemisphere":             loc.get("hemisphere", "unknown"),
+        "lobe":                   loc.get("primary_lobe", "unknown"),
+        # mass_effect.midline_shift_mm
+        "midline_shift_mm":       float(me.get("midline_shift_mm", 0.0)),
+        # no dice score in pipeline output — always null
+        "dice_score":             None,
+        # quality_metrics.segmentation_grade  (e.g. "Good", "Fair", …)
+        "segmentation_quality":   qm.get("segmentation_grade", "unknown"),
     }
 
 
@@ -344,8 +409,8 @@ async def chat(job_id: str, body: ChatRequest):
         if keyword in q_lower:
             raise HTTPException(status_code=400, detail=CLINICAL_REFUSAL)
 
-    # Read the report
-    report_path = SESSIONS_DIR / job_id / "output" / "report.txt"
+    # Read the report from the real pipeline output location
+    report_path = get_output_dir(job_id) / "radiology_report.txt"
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="Report not available yet.")
 
