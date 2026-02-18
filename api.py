@@ -13,10 +13,10 @@ import subprocess
 import sys
 import threading
 import uuid
-import zipfile
 from pathlib import Path
+from typing import List
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
@@ -183,10 +183,34 @@ def get_output_dir(job_id: str) -> Path:
     Return the feature-extraction output directory for this job:
         <project_root>/results/<case_id>/feature_extraction
     All pipeline output files (report, PDF, JSON) live here.
+
+    case_id is read from JOB_STORE when available; on server restart it is
+    discovered by inspecting the sessions/{job_id}/input/ directory on disk.
     """
     with JOB_LOCK:
         case_id = JOB_STORE.get(job_id, {}).get("case_id", "")
+
+    if not case_id:
+        # Fallback: find the case folder that was written to disk at upload time
+        input_dir = SESSIONS_DIR / job_id / "input"
+        if input_dir.exists():
+            subdirs = [d for d in sorted(input_dir.iterdir()) if d.is_dir()]
+            if subdirs:
+                case_id = subdirs[0].name
+
     return BASE_DIR / "results" / case_id / "feature_extraction"
+
+
+def _job_exists(job_id: str) -> bool:
+    """
+    Return True if job_id is known — either in the in-memory JOB_STORE
+    (server still running from the original request) OR the session directory
+    exists on disk (server was restarted after the job was submitted).
+    """
+    with JOB_LOCK:
+        if job_id in JOB_STORE:
+            return True
+    return (SESSIONS_DIR / job_id).is_dir()
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +220,12 @@ def get_output_dir(job_id: str) -> Path:
 def _run_pipeline(job_id: str, case_folder: Path, log_path: Path):
     """Execute run_full_pipeline.py in a subprocess; update JOB_STORE on exit."""
     try:
+        # Force UTF-8 I/O in the child process so emoji/Unicode in print()
+        # statements don't crash on Windows (cp1252 console encoding).
+        child_env = os.environ.copy()
+        child_env["PYTHONIOENCODING"] = "utf-8"
+        child_env["PYTHONUTF8"] = "1"
+
         with open(log_path, "w", encoding="utf-8") as log_fh:
             proc = subprocess.run(
                 [
@@ -206,6 +236,7 @@ def _run_pipeline(job_id: str, case_folder: Path, log_path: Path):
                 stdout=log_fh,
                 stderr=subprocess.STDOUT,
                 cwd=str(BASE_DIR),
+                env=child_env,
             )
 
         # Determine final status from log
@@ -242,35 +273,42 @@ def _run_pipeline(job_id: str, case_folder: Path, log_path: Path):
 # POST /api/analyze --------------------------------------------------------
 
 @app.post("/api/analyze")
-async def analyze(file: UploadFile = File(...)):
-    """Upload a .zip of a BraTS folder, start the pipeline."""
+async def analyze(
+    case_id: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    """
+    Accept individual NIfTI MRI files (t1, t1ce, t2, flair, seg) plus
+    a case_id that names the BraTS case folder, and start the pipeline.
+    """
 
-    if not file.filename or not file.filename.lower().endswith(".zip"):
-        raise HTTPException(status_code=400, detail="Upload must be a .zip file.")
+    if not case_id or not case_id.strip():
+        raise HTTPException(status_code=400, detail="case_id must not be empty.")
+    case_id = case_id.strip()
+
+    # Validate that every uploaded file is a NIfTI file
+    for f in files:
+        fname = (f.filename or "").lower()
+        if not (fname.endswith(".nii.gz") or fname.endswith(".nii")):
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{f.filename}' is not a NIfTI file (.nii or .nii.gz).",
+            )
 
     job_id = str(uuid.uuid4())
     session_dir = SESSIONS_DIR / job_id
-    input_dir = session_dir / "input"
-    output_dir = session_dir / "output"
+    # Place uploaded files inside a sub-folder named after the case_id
+    # so the pipeline receives a properly-named BraTS case folder.
+    case_folder = session_dir / "input" / case_id
     log_path = session_dir / "pipeline.log"
 
-    input_dir.mkdir(parents=True, exist_ok=True)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    case_folder.mkdir(parents=True, exist_ok=True)
 
-    # Save & extract zip
-    zip_path = session_dir / "upload.zip"
-    contents = await file.read()
-    zip_path.write_bytes(contents)
-
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(input_dir)
-    except zipfile.BadZipFile:
-        raise HTTPException(status_code=400, detail="Uploaded file is not a valid zip archive.")
-
-    # Locate the actual BraTS case folder and derive case_id
-    case_folder = _find_case_folder(input_dir)
-    case_id = case_folder.name
+    # Write each uploaded file into the case folder
+    for f in files:
+        dest = case_folder / (f.filename or f.filename)
+        contents = await f.read()
+        dest.write_bytes(contents)
 
     # Register job (store case_id so result-path helpers work)
     with JOB_LOCK:
@@ -297,9 +335,8 @@ async def analyze(file: UploadFile = File(...)):
 async def status(job_id: str):
     """Return current pipeline status by inspecting the log file."""
 
-    with JOB_LOCK:
-        if job_id not in JOB_STORE:
-            raise HTTPException(status_code=404, detail="Job not found.")
+    if not _job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
 
     log_path = SESSIONS_DIR / job_id / "pipeline.log"
     return _parse_log(log_path)
@@ -311,9 +348,8 @@ async def status(job_id: str):
 async def report_text(job_id: str):
     """Return the plain-text radiology report."""
 
-    with JOB_LOCK:
-        if job_id not in JOB_STORE:
-            raise HTTPException(status_code=404, detail="Job not found.")
+    if not _job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
 
     # Pipeline writes to  results/<case_id>/feature_extraction/radiology_report.txt
     report_path = get_output_dir(job_id) / "radiology_report.txt"
@@ -330,9 +366,8 @@ async def report_text(job_id: str):
 async def report_pdf(job_id: str):
     """Return the PDF radiology report."""
 
-    with JOB_LOCK:
-        if job_id not in JOB_STORE:
-            raise HTTPException(status_code=404, detail="Job not found.")
+    if not _job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
 
     # Pipeline writes to  results/<case_id>/feature_extraction/radiology_report.pdf
     pdf_path = get_output_dir(job_id) / "radiology_report.pdf"
@@ -352,9 +387,8 @@ async def report_pdf(job_id: str):
 async def metrics(job_id: str):
     """Return selected tumour metrics from the pipeline's llm_ready_summary.json."""
 
-    with JOB_LOCK:
-        if job_id not in JOB_STORE:
-            raise HTTPException(status_code=404, detail="Job not found.")
+    if not _job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
 
     # Pipeline writes  results/<case_id>/feature_extraction/llm_ready_summary.json
     summary_path = get_output_dir(job_id) / "llm_ready_summary.json"
@@ -397,9 +431,8 @@ async def metrics(job_id: str):
 async def chat(job_id: str, body: ChatRequest):
     """Answer a question about the patient report via the RAG assistant."""
 
-    with JOB_LOCK:
-        if job_id not in JOB_STORE:
-            raise HTTPException(status_code=404, detail="Job not found.")
+    if not _job_exists(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
 
     question = body.question
 

@@ -198,33 +198,80 @@ def page_upload():
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
-        uploaded = st.file_uploader(
-            "Upload BraTS Case (.zip)",
-            type=["zip"],
-            accept_multiple_files=False,
+        case_id = st.text_input(
+            "Case / Patient ID",
+            placeholder="e.g. BraTS-GLI-00003-000",
+            help="Enter the BraTS case folder name. This becomes the output folder name.",
         )
 
-        st.markdown(
-            '<p style="font-size:13px;color:#777;">'
-            "Zip must contain: t1.nii.gz, t1ce.nii.gz, t2.nii.gz, flair.nii.gz"
-            "</p>",
-            unsafe_allow_html=True,
+        uploaded_files = st.file_uploader(
+            "Upload MRI modality files",
+            type=["gz", "nii"],
+            accept_multiple_files=True,
+            help="Select all NIfTI files for this case (t1.nii.gz, t1ce.nii.gz, t2.nii.gz, flair.nii.gz and optionally seg.nii.gz).",
         )
 
+        # Show which required modalities are present
+        REQUIRED = {"t1", "t1ce", "t2", "flair"}
+        # Map BraTS 2025 suffixes → canonical names
+        MODALITY_ALIASES = {
+            "t1n": "t1",    # BraTS 2025: t1n  → t1
+            "t1c": "t1ce",  # BraTS 2025: t1c  → t1ce
+            "t2w": "t2",    # BraTS 2025: t2w  → t2
+            "t2f": "flair", # BraTS 2025: t2f  → flair
+        }
+        found_modalities: set = set()
+        if uploaded_files:
+            for f in uploaded_files:
+                fname = (f.name or "").lower().replace(".nii.gz", "").replace(".nii", "")
+                # strip any case-id prefix (e.g. BraTS-GLI-00003-000_t1 → t1,
+                # or BraTS-GLI-00031-000-t2w → t2w)
+                suffix = fname.split("_")[-1] if "_" in fname else fname.split("-")[-1]
+                # normalise BraTS 2025 aliases to canonical names
+                suffix = MODALITY_ALIASES.get(suffix, suffix)
+                found_modalities.add(suffix)
+
+            missing = REQUIRED - found_modalities
+            if missing:
+                st.markdown(
+                    f'<p style="font-size:13px;color:#c0392b;">'
+                    f"⚠️ Missing required modalities: {', '.join(sorted(missing))}</p>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<p style="font-size:13px;color:#1a7a4a;">✅ All required modalities present</p>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<p style="font-size:13px;color:#777;">'
+                "Required: t1.nii.gz · t1ce.nii.gz · t2.nii.gz · flair.nii.gz"
+                "</p>",
+                unsafe_allow_html=True,
+            )
+
+        ready = bool(uploaded_files) and bool(case_id and case_id.strip())
         analyze_clicked = st.button(
             "Analyze Case",
-            disabled=(uploaded is None),
+            disabled=not ready,
             use_container_width=True,
         )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if analyze_clicked and uploaded is not None:
-            with st.spinner("Uploading…"):
+        if analyze_clicked and uploaded_files and case_id:
+            with st.spinner("Uploading files…"):
                 try:
+                    # Build multipart: one 'files' entry per NIfTI file + case_id field
+                    multipart_files = [
+                        ("files", (f.name, f.getvalue(), "application/octet-stream"))
+                        for f in uploaded_files
+                    ]
                     resp = requests.post(
                         f"{API_BASE}/api/analyze",
-                        files={"file": (uploaded.name, uploaded.getvalue(), "application/zip")},
+                        data={"case_id": case_id.strip()},
+                        files=multipart_files,
                         timeout=120,
                     )
                     resp.raise_for_status()
@@ -296,7 +343,7 @@ def page_processing():
 
         st.markdown(
             '<p style="font-size:12px;font-style:italic;color:#888;">'
-            "Segmentation runs on CPU and typically takes 5–6 minutes. "
+            "Typically takes 5 minutes. "
             "Please keep this tab open.</p>",
             unsafe_allow_html=True,
         )

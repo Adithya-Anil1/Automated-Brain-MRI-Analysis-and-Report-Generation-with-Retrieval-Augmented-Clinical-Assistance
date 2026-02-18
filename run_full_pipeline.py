@@ -121,7 +121,9 @@ def rename_brats2025_files(case_folder):
             continue
         
         needs_compression = extension == 'nii'
-        new_filename = f"{file_case_id}_{new_suffix}.nii.gz"
+        # Always use the folder's case_id so the renamed files match what the
+        # rest of the pipeline expects (case_folder.name + "_<suffix>.nii.gz").
+        new_filename = f"{case_id}_{new_suffix}.nii.gz"
         new_path = case_folder / new_filename
         
         if new_path.exists():
@@ -599,9 +601,15 @@ def run_pipeline(case_folder):
 
         report_path = results_folder / "feature_extraction" / "radiology_report.txt"
         if report_path.exists():
-            print(f"\n  ✅ Report available — launching interactive RAG assistant")
-            print_header("RAG EDUCATIONAL ASSISTANT — Interactive Q&A")
-            run_rag_assistant(report_path)
+            # Only launch interactive session when running in a real terminal.
+            # When invoked as a subprocess (e.g. from the API), stdin is not a
+            # TTY, so skip the blocking input() loop.
+            if sys.stdin.isatty():
+                print(f"\n  ✅ Report available — launching interactive RAG assistant")
+                print_header("RAG EDUCATIONAL ASSISTANT — Interactive Q&A")
+                run_rag_assistant(report_path)
+            else:
+                print(f"\n  ✅ Report available — skipping interactive RAG (non-interactive mode)")
         else:
             print(f"\n  ⚠ Skipped — no radiology report available for RAG")
 
