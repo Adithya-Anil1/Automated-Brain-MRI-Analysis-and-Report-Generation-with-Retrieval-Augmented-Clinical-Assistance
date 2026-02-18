@@ -463,7 +463,32 @@ def call_gemini(prompt: str) -> str:
 
 
 # ============================================================================
-# 8.  MAIN ENTRY POINT — answer_query()
+# 8.  CACHED SINGLETONS  (avoid re-loading on every query)
+# ============================================================================
+
+_chroma_collection = None   # cached ChromaDB collection
+_dummy_store = None         # cached DummyVectorStore
+
+
+def _get_chroma_collection():
+    """Return a cached ChromaDB collection (loaded once)."""
+    global _chroma_collection
+    if _chroma_collection is None:
+        from RAG_Assistant.vector_store_builder import load_vector_store
+        _chroma_collection = load_vector_store()
+    return _chroma_collection
+
+
+def _get_dummy_store() -> DummyVectorStore:
+    """Return a cached DummyVectorStore (built once)."""
+    global _dummy_store
+    if _dummy_store is None:
+        _dummy_store = init_vector_store()
+    return _dummy_store
+
+
+# ============================================================================
+# 9.  MAIN ENTRY POINT — answer_query()
 # ============================================================================
 
 def answer_query(user_query: str, patient_report_text: str) -> str:
@@ -507,17 +532,15 @@ def answer_query(user_query: str, patient_report_text: str) -> str:
     # fall back to dummy in-memory store if ChromaDB is unavailable.
     retrieved = None
     try:
-        from RAG_Assistant.vector_store_builder import load_vector_store
-        collection = load_vector_store()
+        collection = _get_chroma_collection()
         retrieved = collection.query(
             query_texts=[user_query],
             n_results=2,
             include=["documents", "metadatas", "distances"],
         )
     except Exception:
-        # Fall back to dummy vector store
-        vector_store = init_vector_store()
-        retrieved = vector_store.retrieve(query=user_query, top_k=2)
+        # Fall back to dummy vector store (cached at module level)
+        retrieved = _get_dummy_store().retrieve(query=user_query, top_k=2)
 
     # ------------------------------------------------------------------
     # Step 3: BUILD PROMPT with both data sources
