@@ -477,178 +477,190 @@ def run_pipeline(case_folder):
     print(f"🕐 Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     pipeline_start = time.time()
-    
-    # =========================================================================
-    # STEP 1: Rename files
-    # =========================================================================
-    print_step(1, "RENAMING FILES (BraTS 2025 → BraTS 2021 format)")
-    
-    case_id, renamed, already_ok = rename_brats2025_files(case_folder)
-    
-    if renamed > 0:
-        print(f"\n  ✅ Renamed {renamed} files")
-    elif already_ok > 0:
-        print(f"\n  ✅ Files already in correct format ({already_ok} files)")
-    else:
-        print(f"\n  ⚠ No files found to rename")
-    
-    # Verify required files exist
-    required_files = ['t1', 't1ce', 't2', 'flair']
-    missing = []
-    for suffix in required_files:
-        if not (case_folder / f"{case_id}_{suffix}.nii.gz").exists():
-            missing.append(suffix)
-    
-    if missing:
-        raise FileNotFoundError(f"Missing required MRI files: {missing}")
-    
-    # Check for ground truth
-    gt_file = case_folder / f"{case_id}_seg.nii.gz"
-    if not gt_file.exists():
-        raise FileNotFoundError(f"Ground truth segmentation not found: {gt_file}")
-    
-    print(f"  ✅ All required files present")
-    print(f"  ✅ Ground truth found: {gt_file.name}")
-    
-    # =========================================================================
-    # STEP 2: Run segmentation
-    # =========================================================================
-    print_step(2, "RUNNING SEGMENTATION (BraTS 2021 KAIST Model)")
-    
-    results_folder.mkdir(parents=True, exist_ok=True)
-    seg_output = run_segmentation(case_folder, results_folder)
-    
-    print(f"\n  ✅ Segmentation complete: {seg_output.name}")
-    
-    # =========================================================================
-    # STEP 3: Convert labels
-    # =========================================================================
-    print_step(3, "CONVERTING LABELS")
-    
-    converted_file = results_folder / f"{case_id}_brats.nii.gz"
-    convert_labels(seg_output, converted_file)
-    
-    print(f"\n  ✅ Labels converted: {converted_file.name}")
-    
-    # =========================================================================
-    # STEP 4: Evaluate segmentation
-    # =========================================================================
-    print_step(4, "EVALUATING SEGMENTATION")
-    
-    metrics = evaluate_segmentation(converted_file, gt_file)
-    
-    if metrics:
-        print(f"\n  📊 Summary:")
-        if 'mean_dice' in metrics:
-            print(f"     Mean Dice: {metrics['mean_dice']:.2f}%")
-        if 'wt_dice' in metrics:
-            print(f"     Whole Tumor: {metrics['wt_dice']:.2f}%")
-        if 'tc_dice' in metrics:
-            print(f"     Tumor Core: {metrics['tc_dice']:.2f}%")
-        if 'et_dice' in metrics:
-            print(f"     Enhancing Tumor: {metrics['et_dice']:.2f}%")
-    
-    # =========================================================================
-    # STEP 5: Feature extraction
-    # =========================================================================
-    print_step(5, "RUNNING FEATURE EXTRACTION PIPELINE")
-    
-    feature_output = results_folder / "feature_extraction"
-    run_feature_extraction(case_folder, converted_file, feature_output)
-    
-    print(f"\n  ✅ Feature extraction complete")
-    print(f"  📂 Output folder: {feature_output}")
-    
-    # =========================================================================
-    # STEP 6: Generate Gemini report
-    # =========================================================================
-    print_step(6, "GENERATING RADIOLOGY REPORT")
-    
-    gemini_report = run_gemini_report(results_folder)
-    
-    if gemini_report:
-        print(f"\n  ✅ Radiology report generated: {gemini_report.name}")
-    else:
-        print(f"\n  ⚠ Radiology report not generated (check API key in generate_report_gemini.py)")
-    
-    # =========================================================================
-    # STEP 7: Generate PDF report
-    # =========================================================================
-    print_step(7, "GENERATING PROFESSIONAL PDF REPORT")
-    
-    pdf_report = None
-    if gemini_report:
-        pdf_report = run_pdf_report(results_folder)
-        
-        if pdf_report:
-            print(f"\n  ✅ PDF report generated: {pdf_report.name}")
+
+    try:
+        # =====================================================================
+        # STEP 1: Rename files
+        # =====================================================================
+        print_step(1, "RENAMING FILES (BraTS 2025 → BraTS 2021 format)")
+
+        case_id, renamed, already_ok = rename_brats2025_files(case_folder)
+
+        if renamed > 0:
+            print(f"\n  ✅ Renamed {renamed} files")
+        elif already_ok > 0:
+            print(f"\n  ✅ Files already in correct format ({already_ok} files)")
         else:
-            print(f"\n  ⚠ PDF report not generated")
-    else:
-        print(f"\n  ⚠ Skipped (text report required first)")
-    
-    # =========================================================================
-    # STEP 8: RAG Educational Assistant (interactive Q&A)
-    # =========================================================================
-    print_step(8, "RAG EDUCATIONAL ASSISTANT")
+            print(f"\n  ⚠ No files found to rename")
 
-    report_path = results_folder / "feature_extraction" / "radiology_report.txt"
-    if report_path.exists():
-        print(f"\n  ✅ Report available — launching interactive RAG assistant")
-        print_header("RAG EDUCATIONAL ASSISTANT — Interactive Q&A")
-        run_rag_assistant(report_path)
-    else:
-        print(f"\n  ⚠ Skipped — no radiology report available for RAG")
+        # Verify required files exist
+        required_files = ['t1', 't1ce', 't2', 'flair']
+        missing = []
+        for suffix in required_files:
+            if not (case_folder / f"{case_id}_{suffix}.nii.gz").exists():
+                missing.append(suffix)
 
-    # =========================================================================
-    # SUMMARY
-    # =========================================================================
-    pipeline_elapsed = time.time() - pipeline_start
-    
-    print_header("PIPELINE COMPLETE")
-    print(f"\n📋 Case ID: {case_id}")
-    print(f"⏱ Total time: {pipeline_elapsed/60:.1f} minutes")
-    print(f"\n📂 Output files:")
-    print(f"   • Segmentation: {seg_output}")
-    print(f"   • Converted: {converted_file}")
-    print(f"   • Feature extraction: {feature_output}")
-    print(f"   • LLM-ready JSON: {feature_output / 'llm_ready_summary.json'}")
-    if gemini_report:
-        print(f"   • Radiology report: {gemini_report}")
-    if pdf_report:
-        print(f"   • PDF report: {pdf_report}")
-    
-    if metrics and 'mean_dice' in metrics:
-        rating = "⭐ Excellent" if metrics['mean_dice'] >= 90 else \
-                 "✓ Good" if metrics['mean_dice'] >= 80 else \
-                 "~ Moderate" if metrics['mean_dice'] >= 70 else "△ Fair"
-        print(f"\n📊 Performance: {metrics['mean_dice']:.2f}% Mean Dice ({rating})")
-    
-    print(f"\n🕐 Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # Save pipeline summary
-    summary = {
-        "case_id": case_id,
-        "timestamp": datetime.now().isoformat(),
-        "pipeline_duration_minutes": round(pipeline_elapsed / 60, 2),
-        "input_folder": str(case_folder),
-        "output_folder": str(results_folder),
-        "segmentation_file": str(seg_output),
-        "converted_file": str(converted_file),
-        "ground_truth_file": str(gt_file),
-        "feature_extraction_folder": str(feature_output),
-        "gemini_report": str(gemini_report) if gemini_report else None,
-        "pdf_report": str(pdf_report) if pdf_report else None,
-        "metrics": metrics
-    }
-    
-    summary_file = results_folder / "pipeline_summary.json"
-    with open(summary_file, 'w') as f:
-        json.dump(summary, f, indent=2)
-    
-    print(f"\n📄 Pipeline summary saved: {summary_file}")
-    
-    return summary
+        if missing:
+            raise FileNotFoundError(f"Missing required MRI files: {missing}")
+
+        # Check for ground truth
+        gt_file = case_folder / f"{case_id}_seg.nii.gz"
+        if not gt_file.exists():
+            raise FileNotFoundError(f"Ground truth segmentation not found: {gt_file}")
+
+        print(f"  ✅ All required files present")
+        print(f"  ✅ Ground truth found: {gt_file.name}")
+
+        # =====================================================================
+        # STEP 2: Run segmentation
+        # =====================================================================
+        print("STAGE:segmenting")
+        print_step(2, "RUNNING SEGMENTATION (BraTS 2021 KAIST Model)")
+
+        results_folder.mkdir(parents=True, exist_ok=True)
+        seg_output = run_segmentation(case_folder, results_folder)
+
+        print(f"\n  ✅ Segmentation complete: {seg_output.name}")
+
+        # =====================================================================
+        # STEP 3: Convert labels
+        # =====================================================================
+        print_step(3, "CONVERTING LABELS")
+
+        converted_file = results_folder / f"{case_id}_brats.nii.gz"
+        convert_labels(seg_output, converted_file)
+
+        print(f"\n  ✅ Labels converted: {converted_file.name}")
+
+        # =====================================================================
+        # STEP 4: Evaluate segmentation
+        # =====================================================================
+        print_step(4, "EVALUATING SEGMENTATION")
+
+        metrics = evaluate_segmentation(converted_file, gt_file)
+
+        if metrics:
+            print(f"\n  📊 Summary:")
+            if 'mean_dice' in metrics:
+                print(f"     Mean Dice: {metrics['mean_dice']:.2f}%")
+            if 'wt_dice' in metrics:
+                print(f"     Whole Tumor: {metrics['wt_dice']:.2f}%")
+            if 'tc_dice' in metrics:
+                print(f"     Tumor Core: {metrics['tc_dice']:.2f}%")
+            if 'et_dice' in metrics:
+                print(f"     Enhancing Tumor: {metrics['et_dice']:.2f}%")
+
+        # =====================================================================
+        # STEP 5: Feature extraction
+        # =====================================================================
+        print("STAGE:extracting")
+        print_step(5, "RUNNING FEATURE EXTRACTION PIPELINE")
+
+        feature_output = results_folder / "feature_extraction"
+        run_feature_extraction(case_folder, converted_file, feature_output)
+
+        print(f"\n  ✅ Feature extraction complete")
+        print(f"  📂 Output folder: {feature_output}")
+
+        # =====================================================================
+        # STEP 6: Generate Gemini report
+        # =====================================================================
+        print("STAGE:generating")
+        print_step(6, "GENERATING RADIOLOGY REPORT")
+
+        gemini_report = run_gemini_report(results_folder)
+
+        if gemini_report:
+            print(f"\n  ✅ Radiology report generated: {gemini_report.name}")
+        else:
+            print(f"\n  ⚠ Radiology report not generated (check API key in generate_report_gemini.py)")
+
+        # =====================================================================
+        # STEP 7: Generate PDF report
+        # =====================================================================
+        print("STAGE:exporting")
+        print_step(7, "GENERATING PROFESSIONAL PDF REPORT")
+
+        pdf_report = None
+        if gemini_report:
+            pdf_report = run_pdf_report(results_folder)
+
+            if pdf_report:
+                print(f"\n  ✅ PDF report generated: {pdf_report.name}")
+            else:
+                print(f"\n  ⚠ PDF report not generated")
+        else:
+            print(f"\n  ⚠ Skipped (text report required first)")
+
+        # =====================================================================
+        # STEP 8: RAG Educational Assistant (interactive Q&A)
+        # =====================================================================
+        print_step(8, "RAG EDUCATIONAL ASSISTANT")
+
+        report_path = results_folder / "feature_extraction" / "radiology_report.txt"
+        if report_path.exists():
+            print(f"\n  ✅ Report available — launching interactive RAG assistant")
+            print_header("RAG EDUCATIONAL ASSISTANT — Interactive Q&A")
+            run_rag_assistant(report_path)
+        else:
+            print(f"\n  ⚠ Skipped — no radiology report available for RAG")
+
+        # =====================================================================
+        # SUMMARY
+        # =====================================================================
+        pipeline_elapsed = time.time() - pipeline_start
+
+        print_header("PIPELINE COMPLETE")
+        print(f"\n📋 Case ID: {case_id}")
+        print(f"⏱ Total time: {pipeline_elapsed/60:.1f} minutes")
+        print(f"\n📂 Output files:")
+        print(f"   • Segmentation: {seg_output}")
+        print(f"   • Converted: {converted_file}")
+        print(f"   • Feature extraction: {feature_output}")
+        print(f"   • LLM-ready JSON: {feature_output / 'llm_ready_summary.json'}")
+        if gemini_report:
+            print(f"   • Radiology report: {gemini_report}")
+        if pdf_report:
+            print(f"   • PDF report: {pdf_report}")
+
+        if metrics and 'mean_dice' in metrics:
+            rating = "⭐ Excellent" if metrics['mean_dice'] >= 90 else \
+                     "✓ Good" if metrics['mean_dice'] >= 80 else \
+                     "~ Moderate" if metrics['mean_dice'] >= 70 else "△ Fair"
+            print(f"\n📊 Performance: {metrics['mean_dice']:.2f}% Mean Dice ({rating})")
+
+        print(f"\n🕐 Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Save pipeline summary
+        summary = {
+            "case_id": case_id,
+            "timestamp": datetime.now().isoformat(),
+            "pipeline_duration_minutes": round(pipeline_elapsed / 60, 2),
+            "input_folder": str(case_folder),
+            "output_folder": str(results_folder),
+            "segmentation_file": str(seg_output),
+            "converted_file": str(converted_file),
+            "ground_truth_file": str(gt_file),
+            "feature_extraction_folder": str(feature_output),
+            "gemini_report": str(gemini_report) if gemini_report else None,
+            "pdf_report": str(pdf_report) if pdf_report else None,
+            "metrics": metrics
+        }
+
+        summary_file = results_folder / "pipeline_summary.json"
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"\n📄 Pipeline summary saved: {summary_file}")
+
+        print("STAGE:done")
+
+        return summary
+
+    except Exception as e:
+        print("STAGE:error")
+        print(f"ERROR:{str(e)}")
+        raise
 
 
 def main():
